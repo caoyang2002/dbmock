@@ -1,6 +1,6 @@
-use async_trait::async_trait;
-use crate::errors::Result;
 use crate::core::schema::Schema;
+use crate::errors::Result;
+use async_trait::async_trait;
 
 /// Trait that all database drivers must implement
 #[async_trait]

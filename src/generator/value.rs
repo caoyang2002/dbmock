@@ -1,8 +1,8 @@
-use rand::Rng;
-use rand::seq::SliceRandom;
-use uuid::Uuid;
-use chrono::{Utc, Duration};
 use crate::core::schema::ColumnSchema;
+use chrono::{Duration, Utc};
+use rand::seq::SliceRandom;
+use rand::Rng;
+use uuid::Uuid;
 
 /// Generate a SQL literal value for a column
 pub fn generate_value(col: &ColumnSchema, db_type: &str) -> String {
@@ -11,7 +11,13 @@ pub fn generate_value(col: &ColumnSchema, db_type: &str) -> String {
         return v;
     }
 
-    type_based_value(&col.data_type, col.max_length, col.numeric_precision, col.numeric_scale, db_type)
+    type_based_value(
+        &col.data_type,
+        col.max_length,
+        col.numeric_precision,
+        col.numeric_scale,
+        db_type,
+    )
 }
 
 fn name_based_value(name: &str, data_type: &str) -> Option<String> {
@@ -68,7 +74,8 @@ fn name_based_value(name: &str, data_type: &str) -> Option<String> {
     }
 
     // Description / content / body
-    if n.contains("description") || n.contains("content") || n.contains("body") || n.contains("bio") {
+    if n.contains("description") || n.contains("content") || n.contains("body") || n.contains("bio")
+    {
         return Some(format!("'{}'", fake_paragraph()));
     }
     if n.contains("title") || n.contains("subject") || n.contains("headline") {
@@ -81,7 +88,12 @@ fn name_based_value(name: &str, data_type: &str) -> Option<String> {
     }
 
     // Boolean-like flags
-    if n.starts_with("is_") || n.starts_with("has_") || n.starts_with("can_") || n == "active" || n == "enabled" {
+    if n.starts_with("is_")
+        || n.starts_with("has_")
+        || n.starts_with("can_")
+        || n == "active"
+        || n == "enabled"
+    {
         return Some(fake_bool_str(data_type));
     }
 
@@ -99,7 +111,10 @@ fn name_based_value(name: &str, data_type: &str) -> Option<String> {
 
     // Timestamps
     if n.contains("created") || n.contains("updated") || n.contains("deleted") || n.contains("at") {
-        if data_type.contains("timestamp") || data_type.contains("datetime") || data_type.contains("date") {
+        if data_type.contains("timestamp")
+            || data_type.contains("datetime")
+            || data_type.contains("date")
+        {
             return Some(fake_timestamp());
         }
     }
@@ -125,7 +140,12 @@ fn type_based_value(
     let dt = data_type.to_lowercase();
 
     // Integer types
-    if dt.contains("int") || dt == "integer" || dt == "bigint" || dt == "smallint" || dt == "tinyint" {
+    if dt.contains("int")
+        || dt == "integer"
+        || dt == "bigint"
+        || dt == "smallint"
+        || dt == "tinyint"
+    {
         return rand::thread_rng().gen_range(1..=100000).to_string();
     }
 
@@ -197,14 +217,28 @@ fn type_based_value(
 fn fake_bool_str(data_type: &str) -> String {
     let b = rand::thread_rng().gen_bool(0.5);
     if data_type.contains("bool") {
-        if b { "true".to_string() } else { "false".to_string() }
+        if b {
+            "true".to_string()
+        } else {
+            "false".to_string()
+        }
     } else {
-        if b { "1".to_string() } else { "0".to_string() }
+        if b {
+            "1".to_string()
+        } else {
+            "0".to_string()
+        }
     }
 }
 
 fn fake_email() -> String {
-    let domains = ["gmail.com", "yahoo.com", "outlook.com", "example.com", "test.org"];
+    let domains = [
+        "gmail.com",
+        "yahoo.com",
+        "outlook.com",
+        "example.com",
+        "test.org",
+    ];
     let domain = domains.choose(&mut rand::thread_rng()).unwrap();
     format!(
         "{}.{}@{}",
@@ -216,19 +250,19 @@ fn fake_email() -> String {
 
 fn fake_first_name() -> String {
     let names = [
-        "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry",
-        "Iris", "Jack", "Karen", "Leo", "Mia", "Noah", "Olivia", "Paul",
-        "Quinn", "Rose", "Sam", "Tina", "Uma", "Victor", "Wendy", "Xander",
-        "Yara", "Zoe", "Liam", "Emma", "Ava", "Sophia", "Mason", "Logan",
+        "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry", "Iris", "Jack",
+        "Karen", "Leo", "Mia", "Noah", "Olivia", "Paul", "Quinn", "Rose", "Sam", "Tina", "Uma",
+        "Victor", "Wendy", "Xander", "Yara", "Zoe", "Liam", "Emma", "Ava", "Sophia", "Mason",
+        "Logan",
     ];
     names.choose(&mut rand::thread_rng()).unwrap().to_string()
 }
 
 fn fake_last_name() -> String {
     let names = [
-        "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
-        "Davis", "Martinez", "Wilson", "Anderson", "Taylor", "Thomas", "Moore",
-        "Jackson", "White", "Harris", "Martin", "Thompson", "Young", "King",
+        "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Martinez",
+        "Wilson", "Anderson", "Taylor", "Thomas", "Moore", "Jackson", "White", "Harris", "Martin",
+        "Thompson", "Young", "King",
     ];
     names.choose(&mut rand::thread_rng()).unwrap().to_string()
 }
@@ -254,7 +288,14 @@ fn fake_phone() -> String {
 }
 
 fn fake_address() -> String {
-    let streets = ["Main St", "Oak Ave", "Maple Dr", "Cedar Ln", "Park Blvd", "Lake Rd"];
+    let streets = [
+        "Main St",
+        "Oak Ave",
+        "Maple Dr",
+        "Cedar Ln",
+        "Park Blvd",
+        "Lake Rd",
+    ];
     let st = streets.choose(&mut rand::thread_rng()).unwrap();
     let n: u32 = rand::thread_rng().gen_range(1..=9999);
     format!("{} {}", n, st)
@@ -262,16 +303,31 @@ fn fake_address() -> String {
 
 fn fake_city() -> String {
     let cities = [
-        "New York", "Los Angeles", "Chicago", "Houston", "Phoenix",
-        "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose",
-        "Austin", "Jacksonville", "Seattle", "Denver", "Boston",
+        "New York",
+        "Los Angeles",
+        "Chicago",
+        "Houston",
+        "Phoenix",
+        "Philadelphia",
+        "San Antonio",
+        "San Diego",
+        "Dallas",
+        "San Jose",
+        "Austin",
+        "Jacksonville",
+        "Seattle",
+        "Denver",
+        "Boston",
     ];
     cities.choose(&mut rand::thread_rng()).unwrap().to_string()
 }
 
 fn fake_country() -> String {
     let countries = ["US", "GB", "CA", "AU", "DE", "FR", "JP", "CN", "BR", "IN"];
-    countries.choose(&mut rand::thread_rng()).unwrap().to_string()
+    countries
+        .choose(&mut rand::thread_rng())
+        .unwrap()
+        .to_string()
 }
 
 fn fake_zip() -> String {
@@ -282,18 +338,40 @@ fn fake_zip() -> String {
 fn fake_url() -> String {
     let domains = ["example.com", "test.org", "demo.io", "sample.net"];
     let d = domains.choose(&mut rand::thread_rng()).unwrap();
-    format!("https://www.{}/page/{}", d, rand::thread_rng().gen_range(1..=999))
+    format!(
+        "https://www.{}/page/{}",
+        d,
+        rand::thread_rng().gen_range(1..=999)
+    )
 }
 
 fn fake_paragraph() -> String {
     let words = [
-        "lorem", "ipsum", "dolor", "sit", "amet", "consectetur",
-        "adipiscing", "elit", "sed", "do", "eiusmod", "tempor",
-        "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua",
+        "lorem",
+        "ipsum",
+        "dolor",
+        "sit",
+        "amet",
+        "consectetur",
+        "adipiscing",
+        "elit",
+        "sed",
+        "do",
+        "eiusmod",
+        "tempor",
+        "incididunt",
+        "ut",
+        "labore",
+        "et",
+        "dolore",
+        "magna",
+        "aliqua",
     ];
     let mut rng = rand::thread_rng();
     let count = rng.gen_range(10..=25);
-    let sentence: Vec<&str> = (0..count).map(|_| *words.choose(&mut rng).unwrap()).collect();
+    let sentence: Vec<&str> = (0..count)
+        .map(|_| *words.choose(&mut rng).unwrap())
+        .collect();
     let text = sentence.join(" ");
     // Escape single quotes
     text.replace('\'', "''")
@@ -301,25 +379,52 @@ fn fake_paragraph() -> String {
 
 fn fake_sentence() -> String {
     let words = [
-        "The", "Quick", "Brown", "Fox", "Jumps", "Over", "Lazy", "Dog",
-        "Hello", "World", "New", "Update", "Feature", "Release", "Version",
-        "Important", "Breaking", "News", "Today",
+        "The",
+        "Quick",
+        "Brown",
+        "Fox",
+        "Jumps",
+        "Over",
+        "Lazy",
+        "Dog",
+        "Hello",
+        "World",
+        "New",
+        "Update",
+        "Feature",
+        "Release",
+        "Version",
+        "Important",
+        "Breaking",
+        "News",
+        "Today",
     ];
     let mut rng = rand::thread_rng();
     let count = rng.gen_range(3..=8);
-    let sentence: Vec<&str> = (0..count).map(|_| *words.choose(&mut rng).unwrap()).collect();
+    let sentence: Vec<&str> = (0..count)
+        .map(|_| *words.choose(&mut rng).unwrap())
+        .collect();
     sentence.join(" ").replace('\'', "''")
 }
 
 fn fake_status() -> String {
-    let statuses = ["active", "inactive", "pending", "approved", "rejected", "draft"];
-    statuses.choose(&mut rand::thread_rng()).unwrap().to_string()
+    let statuses = [
+        "active", "inactive", "pending", "approved", "rejected", "draft",
+    ];
+    statuses
+        .choose(&mut rand::thread_rng())
+        .unwrap()
+        .to_string()
 }
 
 fn fake_hash() -> String {
     // bcrypt-like placeholder
-    let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".chars().collect();
-    let hash: String = (0..60).map(|_| *chars.choose(&mut rand::thread_rng()).unwrap()).collect();
+    let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        .chars()
+        .collect();
+    let hash: String = (0..60)
+        .map(|_| *chars.choose(&mut rand::thread_rng()).unwrap())
+        .collect();
     format!("$2b$12${}", hash)
 }
 
@@ -339,7 +444,12 @@ fn fake_date() -> String {
 
 fn fake_time() -> String {
     let mut rng = rand::thread_rng();
-    format!("'{:02}:{:02}:{:02}'", rng.gen_range(0..=23), rng.gen_range(0..=59), rng.gen_range(0..=59))
+    format!(
+        "'{:02}:{:02}:{:02}'",
+        rng.gen_range(0..=23),
+        rng.gen_range(0..=59),
+        rng.gen_range(0..=59)
+    )
 }
 
 fn random_string(len: usize) -> String {

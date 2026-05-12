@@ -1,8 +1,8 @@
-use async_trait::async_trait;
-use sqlx::{Pool, Postgres, Row};
 use crate::core::driver::DatabaseDriver;
 use crate::core::schema::{ColumnSchema, ForeignKey, Schema, TableSchema};
 use crate::errors::{MockerError, Result};
+use async_trait::async_trait;
+use sqlx::{Pool, Postgres, Row};
 
 pub struct PostgresDriver {
     pool: Pool<Postgres>,
@@ -50,9 +50,7 @@ impl DatabaseDriver for PostgresDriver {
     }
 
     async fn execute_sql(&self, sql: &str) -> Result<u64> {
-        let result = sqlx::query(sql)
-            .execute(&self.pool)
-            .await?;
+        let result = sqlx::query(sql).execute(&self.pool).await?;
         Ok(result.rows_affected())
     }
 
@@ -93,7 +91,10 @@ impl PostgresDriver {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().map(|r| r.get::<String, _>("table_name")).collect())
+        Ok(rows
+            .iter()
+            .map(|r| r.get::<String, _>("table_name"))
+            .collect())
     }
 
     async fn fetch_columns(&self, table: &str) -> Result<Vec<ColumnSchema>> {
@@ -123,7 +124,7 @@ impl PostgresDriver {
                 is_nullable: r.get::<String, _>("is_nullable") == "YES",
                 is_primary_key: false,
                 is_auto_increment: r.get("is_auto_increment"),
-                max_length: r.get::<Option<i32>,_>("character_maximum_length"),
+                max_length: r.get::<Option<i32>, _>("character_maximum_length"),
                 numeric_precision: r.get::<Option<i32>, _>("numeric_precision"),
                 numeric_scale: r.get::<Option<i32>, _>("numeric_scale"),
                 default_value: r.get("column_default"),
@@ -150,7 +151,10 @@ impl PostgresDriver {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().map(|r| r.get::<String, _>("column_name")).collect())
+        Ok(rows
+            .iter()
+            .map(|r| r.get::<String, _>("column_name"))
+            .collect())
     }
 
     async fn fetch_foreign_keys(&self, table: &str) -> Result<Vec<ForeignKey>> {

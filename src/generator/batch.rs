@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::core::schema::TableSchema;
 use crate::generator::value::generate_value;
+use std::collections::HashMap;
 
 const BATCH_SIZE: usize = 1000;
 

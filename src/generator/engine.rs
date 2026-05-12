@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use async_trait::async_trait;
-use indicatif::{ProgressBar, ProgressStyle};
 use crate::core::driver::DatabaseDriver;
 use crate::core::generator::{DataGenerator, GenerationReport};
 use crate::core::schema::Schema;
@@ -9,6 +5,10 @@ use crate::errors::{MockerError, Result};
 use crate::generator::batch::build_insert_batches;
 use crate::generator::dependency::topological_sort;
 use crate::generator::value::generate_value;
+use async_trait::async_trait;
+use indicatif::{ProgressBar, ProgressStyle};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 pub struct MockEngine {
     driver: Arc<dyn DatabaseDriver>,
@@ -33,7 +33,9 @@ impl DataGenerator for MockEngine {
         // Validate all requested tables exist in schema
         for table in &requested_tables {
             if schema.get_table(table).is_none() {
-                return Err(MockerError::TableNotFound { table: table.clone() });
+                return Err(MockerError::TableNotFound {
+                    table: table.clone(),
+                });
             }
         }
 
@@ -94,9 +96,7 @@ impl DataGenerator for MockEngine {
             }
 
             // Build id pool for this table (sequential since we don't do RETURNING)
-            let pk_pool: Vec<String> = (1..=(row_count as i64))
-                .map(|i| i.to_string())
-                .collect();
+            let pk_pool: Vec<String> = (1..=(row_count as i64)).map(|i| i.to_string()).collect();
             fk_id_pools.insert(table_name.clone(), pk_pool);
 
             report.tables_processed += 1;

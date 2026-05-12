@@ -72,7 +72,12 @@ pub struct GenerateArgs {
     pub schema_sql: Option<String>,
 
     /// Row counts per table, format: table_name=count (repeatable)
-    #[arg(short = 'r', long = "rows", value_name = "TABLE=COUNT", required = true)]
+    #[arg(
+        short = 'r',
+        long = "rows",
+        value_name = "TABLE=COUNT",
+        required = true
+    )]
     pub rows: Vec<String>,
 
     /// Dry-run: print SQL without executing

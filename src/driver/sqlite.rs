@@ -1,8 +1,8 @@
-use async_trait::async_trait;
-use sqlx::{Pool, Row, Sqlite};
 use crate::core::driver::DatabaseDriver;
 use crate::core::schema::{ColumnSchema, ForeignKey, Schema, TableSchema};
 use crate::errors::Result;
+use async_trait::async_trait;
+use sqlx::{Pool, Row, Sqlite};
 
 pub struct SqliteDriver {
     pool: Pool<Sqlite>,

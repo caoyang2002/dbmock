@@ -175,8 +175,8 @@ impl DataGenerator for DryRunEngine {
         row_counts: &HashMap<String, usize>,
         dry_run: bool,
     ) -> Result<core::generator::GenerationReport> {
-        use generator::dependency::topological_sort;
         use generator::batch::build_insert_batches;
+        use generator::dependency::topological_sort;
 
         let requested: Vec<String> = row_counts.keys().cloned().collect();
         let sorted = topological_sort(schema, &requested)?;
@@ -220,9 +220,9 @@ fn build_db_config(
         .map(|s| s.to_string())
         .or_else(|| std::env::var("DATABASE_URL").ok());
 
-    let parsed_type: DbType = db_type.parse().map_err(|e: String| MockerError::Config {
-        message: e,
-    })?;
+    let parsed_type: DbType = db_type
+        .parse()
+        .map_err(|e: String| MockerError::Config { message: e })?;
 
     let default_port = match parsed_type {
         DbType::Postgres => 5432,

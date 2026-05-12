@@ -1,7 +1,7 @@
+use crate::core::schema::Schema;
+use crate::errors::Result;
 use async_trait::async_trait;
 use std::collections::HashMap;
-use crate::errors::Result;
-use crate::core::schema::Schema;
 
 /// Trait for data generation strategies
 #[async_trait]

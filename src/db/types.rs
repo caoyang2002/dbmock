@@ -1,4 +1,4 @@
-use sqlx::{Pool, Postgres, MySql, Sqlite};
+use sqlx::{MySql, Pool, Postgres, Sqlite};
 
 pub enum DbPool {
     Postgres(Pool<Postgres>),

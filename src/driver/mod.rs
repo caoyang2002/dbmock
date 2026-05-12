@@ -2,11 +2,11 @@ pub mod mysql;
 pub mod postgres;
 pub mod sqlite;
 
-use std::sync::Arc;
 use crate::config::{DatabaseConfig, DbType};
 use crate::core::driver::DatabaseDriver;
 use crate::db::DbPool;
 use crate::errors::Result;
+use std::sync::Arc;
 
 pub use mysql::MySqlDriver;
 pub use postgres::PostgresDriver;

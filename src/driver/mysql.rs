@@ -1,8 +1,8 @@
-use async_trait::async_trait;
-use sqlx::{MySql, Pool, Row};
 use crate::core::driver::DatabaseDriver;
 use crate::core::schema::{ColumnSchema, ForeignKey, Schema, TableSchema};
 use crate::errors::Result;
+use async_trait::async_trait;
+use sqlx::{MySql, Pool, Row};
 
 pub struct MySqlDriver {
     pool: Pool<MySql>,
@@ -93,7 +93,10 @@ impl MySqlDriver {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().map(|r| r.get::<String, _>("TABLE_NAME")).collect())
+        Ok(rows
+            .iter()
+            .map(|r| r.get::<String, _>("TABLE_NAME"))
+            .collect())
     }
 
     async fn fetch_columns(&self, table: &str) -> Result<Vec<ColumnSchema>> {
@@ -121,7 +124,7 @@ impl MySqlDriver {
                     is_nullable: r.get::<String, _>("IS_NULLABLE") == "YES",
                     is_primary_key: false,
                     is_auto_increment: extra.contains("auto_increment"),
-                    max_length: r.get::<Option<i32>,_>("CHARACTER_MAXIMUM_LENGTH"),
+                    max_length: r.get::<Option<i32>, _>("CHARACTER_MAXIMUM_LENGTH"),
                     numeric_precision: r.get::<Option<i32>, _>("NUMERIC_PRECISION"),
                     numeric_scale: r.get::<Option<i32>, _>("NUMERIC_SCALE"),
                     default_value: r.get("COLUMN_DEFAULT"),
@@ -144,7 +147,10 @@ impl MySqlDriver {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().map(|r| r.get::<String, _>("COLUMN_NAME")).collect())
+        Ok(rows
+            .iter()
+            .map(|r| r.get::<String, _>("COLUMN_NAME"))
+            .collect())
     }
 
     async fn fetch_foreign_keys(&self, table: &str) -> Result<Vec<ForeignKey>> {
