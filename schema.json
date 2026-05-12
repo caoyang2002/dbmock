@@ -1,0 +1,5887 @@
+{
+  "tables": [
+    {
+      "name": "announcements",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('announcements_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "title",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 200,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "content",
+          "data_type": "text",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "summary",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "cover",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "type",
+          "data_type": "smallint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 16,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "status",
+          "data_type": "smallint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 16,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "is_pinned",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        },
+        {
+          "name": "is_global",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "true",
+          "is_unique": false
+        },
+        {
+          "name": "board_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "published_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "expired_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "view_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "created_by",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_by",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "board_id",
+          "referenced_table": "boards",
+          "referenced_column": "id",
+          "constraint_name": "fk_announcements_board"
+        },
+        {
+          "column": "created_by",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_announcements_creator"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "answer_votes",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('answer_votes_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "comment_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "vote_type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 10,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "attachments",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('attachments_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "file_id",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 64,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "plugin_id",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 64,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "post_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "reply_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "original_name",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 255,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "stored_name",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 255,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "stored_path",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "size",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "file_type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "mime_type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "mime_major",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "ext",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "width",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "height",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "status",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "1",
+          "is_unique": false
+        },
+        {
+          "name": "upload_ip",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 45,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "plugin_meta",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "file_hash",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 64,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "audit_logs",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('audit_logs_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "operator_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "operator_ip",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 45,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "action",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_type",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "before",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "after",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "reason",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "ip",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 64,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "operator_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_audit_logs_operator"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "blocked_ips",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('blocked_ips_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "ip",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 45,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "reason",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "operator_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "expire_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "board_bans",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('board_bans_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "board_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "banned_by",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "reason",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "expires_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "board_id",
+          "referenced_table": "boards",
+          "referenced_column": "id",
+          "constraint_name": "fk_board_bans_board"
+        },
+        {
+          "column": "banned_by",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_board_bans_banner"
+        },
+        {
+          "column": "user_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_board_bans_user"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "boards",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('boards_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "name",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "slug",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "description",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "icon",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "cover",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "parent_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "sort_order",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "view_role",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'user'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "post_role",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'user'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "reply_role",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'user'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "post_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "thread_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "today_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "parent_id",
+          "referenced_table": "boards",
+          "referenced_column": "id",
+          "constraint_name": "fk_boards_children"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "bots",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('bots_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "name",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "version",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "description",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "summary",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 300,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "avatar_url",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 255,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "screenshots",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "homepage_url",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 255,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "type",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 30,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "tags",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "creator_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "creator_name",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "script_code",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "script_url",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "trigger_type",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "cron_expr",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "event_filter",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 200,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "timeout_sec",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "10",
+          "is_unique": false
+        },
+        {
+          "name": "retry_times",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "env_vars",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "resource_limit",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "pricing",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "permissions",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "enabled",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        },
+        {
+          "name": "status",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'inactive'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "exec_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "last_exec_at",
+          "data_type": "timestamp without time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "error_msg",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "config_schema",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "config_values",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "casbin_rule",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('casbin_rule_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "ptype",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "v0",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "v1",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "v2",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "v3",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "v4",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "v5",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "comments",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('comments_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "content",
+          "data_type": "text",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "post_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "author_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "parent_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "like_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "status",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'visible'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "is_answer",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        },
+        {
+          "name": "is_accepted",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        },
+        {
+          "name": "vote_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "post_id",
+          "referenced_table": "posts",
+          "referenced_column": "id",
+          "constraint_name": "fk_posts_comments"
+        },
+        {
+          "column": "author_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_users_comments"
+        },
+        {
+          "column": "parent_id",
+          "referenced_table": "comments",
+          "referenced_column": "id",
+          "constraint_name": "fk_comments_replies"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "content_audit_tasks",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('content_audit_tasks_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_type",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "trigger_type",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "trigger_meta",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "status",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'pending'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "reviewer_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "review_note",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "reviewed_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "reviewer_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_content_audit_tasks_reviewer"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "favorites",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('favorites_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_type",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "group_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "status",
+          "data_type": "smallint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 16,
+          "numeric_scale": 0,
+          "default_value": "1",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "follows",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('follows_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "follower_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "following_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "following_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_users_followers"
+        },
+        {
+          "column": "follower_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_users_following"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "ip_risk_records",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('ip_risk_records_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "ip",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 45,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "event_type",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "event_detail",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "expire_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "likes",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('likes_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "post_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "comment_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "user_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_likes_user"
+        },
+        {
+          "column": "comment_id",
+          "referenced_table": "comments",
+          "referenced_column": "id",
+          "constraint_name": "fk_comments_likes"
+        },
+        {
+          "column": "post_id",
+          "referenced_table": "posts",
+          "referenced_column": "id",
+          "constraint_name": "fk_posts_likes"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "moderator_applications",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('moderator_applications_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "board_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "reason",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "status",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'pending'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "reviewer_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "review_note",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "req_delete_post",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "req_pin_post",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "req_edit_any_post",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "req_manage_moderator",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "req_ban_user",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "reviewer_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_moderator_applications_reviewer"
+        },
+        {
+          "column": "user_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_moderator_applications_user"
+        },
+        {
+          "column": "board_id",
+          "referenced_table": "boards",
+          "referenced_column": "id",
+          "constraint_name": "fk_moderator_applications_board"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "moderator_logs",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('moderator_logs_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "moderator_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "board_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "action",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "reason",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "old_value",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "new_value",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "moderator_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_moderator_logs_moderator"
+        },
+        {
+          "column": "board_id",
+          "referenced_table": "boards",
+          "referenced_column": "id",
+          "constraint_name": "fk_moderator_logs_board"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "moderators",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('moderators_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "board_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "permissions",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "user_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_moderators_user"
+        },
+        {
+          "column": "board_id",
+          "referenced_table": "boards",
+          "referenced_column": "id",
+          "constraint_name": "fk_boards_moderators"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "notifications",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('notifications_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "sender_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 30,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "content",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "is_read",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "user_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_notifications_user"
+        },
+        {
+          "column": "sender_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_notifications_sender"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "plugins",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('plugins_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "name",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "slug",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "version",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "description",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "summary",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 300,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "icon_url",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 255,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "screenshots",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "homepage_url",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 255,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "type",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "category",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 30,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "tags",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "author_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "author_email",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "author_url",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 255,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "script_url",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "server_entry",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 255,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "slots",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "routes",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "pricing",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "compatibility",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "permissions",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "enabled",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        },
+        {
+          "name": "status",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'inactive'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "install_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "rating",
+          "data_type": "numeric",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 2,
+          "numeric_scale": 1,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "config_schema",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "config",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "post_tags",
+      "columns": [
+        {
+          "name": "post_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "tag_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "post_id",
+        "tag_id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "post_id",
+          "referenced_table": "posts",
+          "referenced_column": "id",
+          "constraint_name": "fk_post_tags_post"
+        },
+        {
+          "column": "tag_id",
+          "referenced_table": "tags",
+          "referenced_column": "id",
+          "constraint_name": "fk_post_tags_tag"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "posts",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('posts_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "title",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 200,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "content",
+          "data_type": "text",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "summary",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "cover",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'post'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "post_status",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'draft'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "moderation_status",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'normal'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "author_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "view_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "like_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "pin_top",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        },
+        {
+          "name": "board_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "pin_in_board",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "board_id",
+          "referenced_table": "boards",
+          "referenced_column": "id",
+          "constraint_name": "fk_posts_board"
+        },
+        {
+          "column": "author_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_users_posts"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "questions",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('questions_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "post_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "accepted_answer_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "reward_score",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "answer_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "view_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "accepted_answer_id",
+          "referenced_table": "comments",
+          "referenced_column": "id",
+          "constraint_name": "fk_questions_accepted_answer"
+        },
+        {
+          "column": "post_id",
+          "referenced_table": "posts",
+          "referenced_column": "id",
+          "constraint_name": "fk_posts_question"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "refresh_tokens",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('refresh_tokens_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "token",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "jti",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 36,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_agent",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "ip",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 45,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "expires_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "is_used",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "reports",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('reports_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "reporter_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_type",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'other'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "reason",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "status",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'pending'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "handler_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "handle_note",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "handle_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "content_snapshot",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "reporter_ip",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 45,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "is_anonymous",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        },
+        {
+          "name": "priority",
+          "data_type": "smallint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 16,
+          "numeric_scale": 0,
+          "default_value": "2",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "reporter_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_reports_reporter"
+        },
+        {
+          "column": "handler_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_reports_handler"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "sign_ins",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('sign_ins_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "sign_date",
+          "data_type": "timestamp with time zone",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "score",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "5",
+          "is_unique": false
+        },
+        {
+          "name": "continued",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "1",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "tags",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('tags_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "name",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "description",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 200,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "color",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'#6366f1'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "post_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "timeline_events",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('timeline_events_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "actor_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "action",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "payload",
+          "data_type": "json",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "score",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "actor_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_timeline_events_actor"
+        },
+        {
+          "column": "user_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_timeline_events_user"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "timeline_subscriptions",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('timeline_subscriptions_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "subscriber_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "target_type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'user'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "target_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "is_active",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "true",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "topic_follows",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('topic_follows_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "topic_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "topic_id",
+          "referenced_table": "topics",
+          "referenced_column": "id",
+          "constraint_name": "fk_topics_followers"
+        },
+        {
+          "column": "user_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_topic_follows_user"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "topic_posts",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('topic_posts_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "topic_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "post_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "sort_order",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "added_by",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "post_id",
+          "referenced_table": "posts",
+          "referenced_column": "id",
+          "constraint_name": "fk_topic_posts_post"
+        },
+        {
+          "column": "topic_id",
+          "referenced_table": "topics",
+          "referenced_column": "id",
+          "constraint_name": "fk_topics_posts"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "topics",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('topics_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "title",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "description",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "cover",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "creator_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "is_public",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "true",
+          "is_unique": false
+        },
+        {
+          "name": "post_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "follower_count",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "creator_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_topics_creator"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "user_risk_records",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('user_risk_records_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "event_type",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "event_detail",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "expire_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "column": "user_id",
+          "referenced_table": "users",
+          "referenced_column": "id",
+          "constraint_name": "fk_user_risk_records_user"
+        }
+      ],
+      "unique_constraints": []
+    },
+    {
+      "name": "user_timelines",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('user_timelines_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "timeline_type",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'home'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "last_read_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "users",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('users_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "username",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 50,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "email",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 100,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "password",
+          "data_type": "text",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "avatar",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "bio",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "role",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 20,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "'user'::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "score",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "is_active",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "true",
+          "is_unique": false
+        },
+        {
+          "name": "is_blocked",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        },
+        {
+          "name": "last_login",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "invited_by_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "is_temp_password",
+          "data_type": "boolean",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "false",
+          "is_unique": false
+        },
+        {
+          "name": "temp_password_expire",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "violations",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('violations_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "violation_type",
+          "data_type": "smallint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 16,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "reason",
+          "data_type": "character varying",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 255,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "''::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "content_snapshot",
+          "data_type": "text",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "evidence_url",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 512,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "''::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "source",
+          "data_type": "smallint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 16,
+          "numeric_scale": 0,
+          "default_value": "1",
+          "is_unique": false
+        },
+        {
+          "name": "status",
+          "data_type": "smallint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 16,
+          "numeric_scale": 0,
+          "default_value": "1",
+          "is_unique": false
+        },
+        {
+          "name": "operator_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "punish_type",
+          "data_type": "smallint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 16,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "punish_expire_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "appeal_status",
+          "data_type": "smallint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 16,
+          "numeric_scale": 0,
+          "default_value": "0",
+          "is_unique": false
+        },
+        {
+          "name": "appeal_reason",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "''::character varying",
+          "is_unique": false
+        },
+        {
+          "name": "appeal_time",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "appeal_result",
+          "data_type": "character varying",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": 500,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": "''::character varying",
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    },
+    {
+      "name": "votes",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": true,
+          "is_auto_increment": true,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": "nextval('votes_id_seq'::regclass)",
+          "is_unique": false
+        },
+        {
+          "name": "user_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "comment_id",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "value",
+          "data_type": "bigint",
+          "is_nullable": false,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": 64,
+          "numeric_scale": 0,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "is_nullable": true,
+          "is_primary_key": false,
+          "is_auto_increment": false,
+          "max_length": null,
+          "numeric_precision": null,
+          "numeric_scale": null,
+          "default_value": null,
+          "is_unique": false
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": []
+    }
+  ],
+  "database_type": "postgres"
+}
