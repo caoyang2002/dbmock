@@ -4,3 +4,4 @@ schema.sql
 .idea
 .DS_Store
 mock_config.yml
+env.mk

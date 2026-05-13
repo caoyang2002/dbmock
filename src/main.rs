@@ -253,9 +253,7 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
         let drv = driver::create_driver(&db_config).await?;
         println!("✅  Connected.\n");
 
-        // MockEngine::new 需增加 mock_config 参数
         let engine = MockEngine::new(drv.clone(), mock_config);
-        // let report = engine.generate(&schema_obj, &row_counts, false).await?;
         let report = engine.generate(&schema_obj, &row_counts, false, None).await?;
         drv.close().await;
 
