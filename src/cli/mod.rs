@@ -1,2 +1,2 @@
 pub mod parser;
-pub use parser::{Cli, Commands, ExtractArgs, GenerateArgs};
+pub use parser::{Cli, Commands, ExtractArgs, GenerateArgs,ConfigArgs};

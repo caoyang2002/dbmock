@@ -24,6 +24,8 @@ use crate::core::driver::DatabaseDriver;
 use crate::core::generator::{DataGenerator, GenerationReport};
 use crate::core::schema::{Schema, TableSchema};
 use crate::errors::{MockerError, Result};
+use crate::fieldconfig;
+use crate::fieldconfig::MockConfig;
 use crate::generator::batch::build_insert_batches;
 use crate::generator::dependency::topological_sort;
 
@@ -31,11 +33,12 @@ use crate::generator::dependency::topological_sort;
 
 pub struct MockEngine {
     driver: Arc<dyn DatabaseDriver>,
+    mock_config: Option<MockConfig>,
 }
 
 impl MockEngine {
-    pub fn new(driver: Arc<dyn DatabaseDriver>) -> Self {
-        Self { driver }
+    pub fn new(driver: Arc<dyn DatabaseDriver>,mock_config: Option<MockConfig>) -> Self {
+        Self { driver,mock_config }
     }
 }
 
@@ -47,7 +50,10 @@ impl DataGenerator for MockEngine {
         &self,
         schema: &Schema,
         row_counts: &HashMap<String, usize>,
-        dry_run: bool,
+        preview: bool,
+        _mock_config: Option<&MockConfig>,
+
+
     ) -> Result<GenerationReport> {
         // Validate all requested tables exist in schema
         let requested: Vec<String> = row_counts.keys().cloned().collect();
@@ -68,7 +74,7 @@ impl DataGenerator for MockEngine {
         // Pre-load real IDs from the DB for every table that has FK
         // relationships with our requested tables (whether requested or not).
         let referenced_tables = collect_referenced_tables(schema, &requested);
-        if !dry_run {
+        if !preview {
             for ref_table in &referenced_tables {
                 let pk_col = pk_col_name(schema, ref_table);
                 match self.driver.query_ids(ref_table, &pk_col, 2000).await {
@@ -120,9 +126,10 @@ impl DataGenerator for MockEngine {
                 &db_type,
                 &fk_pools,
                 &self_ref_cols,
+                None,
             );
 
-            if dry_run {
+            if preview {
                 for s in &stmts {
                     println!("{};", s);
                     report.sql_statements.push(s.clone());

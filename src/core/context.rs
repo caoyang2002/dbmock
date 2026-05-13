@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use crate::core::ColumnSchema;
 use crate::datapool::UniqueGenerator;
 
+/// 生成上下文
 pub struct GenContext {
     unique_gens: RefCell<HashMap<String, UniqueGenerator<String>>>,
 }

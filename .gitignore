@@ -3,3 +3,4 @@ schema.json
 schema.sql
 .idea
 .DS_Store
+mock_config.yml

@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 use crate::errors::Result;
 use crate::core::schema::Schema;
+use crate::fieldconfig::infer::MockConfig;
 
 /// Trait for data generation strategies
 #[async_trait]
@@ -12,6 +13,8 @@ pub trait DataGenerator: Send + Sync {
         schema: &Schema,
         row_counts: &HashMap<String, usize>,
         dry_run: bool,
+        mock_config: Option<&MockConfig>,
+
     ) -> Result<GenerationReport>;
 }
 

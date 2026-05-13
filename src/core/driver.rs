@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use crate::errors::Result;
 use crate::core::schema::Schema;
-
+/// 数据库驱动
 /// Trait that all database drivers must implement
 #[async_trait]
 pub trait DatabaseDriver: Send + Sync {

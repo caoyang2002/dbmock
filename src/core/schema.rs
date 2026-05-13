@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// 数据库
 /// Represents a complete database schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Schema {
