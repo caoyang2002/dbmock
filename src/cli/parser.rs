@@ -25,7 +25,7 @@ pub enum Commands {
 #[derive(Args, Debug)]
 pub struct ExtractArgs {
     /// Output JSON file path (custom structured format)
-    #[arg(short = 'j', long = "output", default_value = "schema.json")]
+    #[arg(short = 'j', long = "json", default_value = "schema.json")]
     pub output_json: String,
 
     /// Output SQL file path (CREATE TABLE statements)
