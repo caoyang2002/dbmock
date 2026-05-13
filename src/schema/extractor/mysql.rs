@@ -24,11 +24,7 @@ pub fn schema_to_sql(schema: &Schema) -> String {
             .collect();
 
         if !table.primary_keys.is_empty() {
-            let pk_cols: Vec<String> = table
-                .primary_keys
-                .iter()
-                .map(|k| format!("`{}`", k))
-                .collect();
+            let pk_cols: Vec<String> = table.primary_keys.iter().map(|k| format!("`{}`", k)).collect();
             col_defs.push(format!("  PRIMARY KEY ({})", pk_cols.join(", ")));
         }
 

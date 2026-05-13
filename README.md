@@ -38,6 +38,7 @@ cargo run -- [COMMAND] [OPTIONS]
 
 ```bash
 datamocker extract --db-type postgres --db-host localhost --db-port 5432 --db-name mydb --db-user user --db-pass pass -o schema.json
+# datamocker extract --db-type postgres --db-host localhost --db-port 5432 --db-name tiny_forum --db-user simons --db-pass password -o schema.json
 ```
 
 或者使用 
@@ -60,7 +61,7 @@ datamocker generate --schema schema.json --rows users=100 --rows posts=500
 
 ```bash
 export DATABASE_URL="postgresql://username:password@localhost/mydb"
-例如export DATABASE_URL="postgresql://simons:tf!password@localhost/tiny_forum"
+# export DATABASE_URL="postgresql://simons:tf-password@localhost/tiny_forum"
 datamocker extract -j schema.json
 ```
 

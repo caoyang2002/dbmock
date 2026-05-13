@@ -1,6 +1,6 @@
+use std::path::Path;
 use crate::core::schema::{ColumnSchema, ForeignKey, Schema, TableSchema};
 use crate::errors::{MockerError, Result};
-use std::path::Path;
 
 /// Load schema from a JSON file
 pub fn load_json(path: &Path) -> Result<Schema> {
@@ -55,10 +55,7 @@ fn parse_sql_schema(sql: &str) -> Result<Schema> {
         });
     }
 
-    Ok(Schema {
-        tables,
-        database_type: db_type,
-    })
+    Ok(Schema { tables, database_type: db_type })
 }
 
 fn parse_create_table(sql: &str) -> Option<TableSchema> {
@@ -92,9 +89,7 @@ fn parse_create_table(sql: &str) -> Option<TableSchema> {
             // PRIMARY KEY (col1, col2)
             if let Some(inner) = extract_paren_content(part) {
                 for col in inner.split(',') {
-                    let col = col
-                        .trim()
-                        .trim_matches(|c| c == '"' || c == '`' || c == '\'');
+                    let col = col.trim().trim_matches(|c| c == '"' || c == '`' || c == '\'');
                     primary_keys.push(col.to_string());
                 }
             }
@@ -145,9 +140,7 @@ fn extract_identifier(s: &str) -> Option<(String, &str)> {
         let rest = &s[end + 1..];
         Some((name, rest))
     } else {
-        let end = s
-            .find(|c: char| c.is_whitespace() || c == '(')
-            .unwrap_or(s.len());
+        let end = s.find(|c: char| c.is_whitespace() || c == '(').unwrap_or(s.len());
         let name = s[..end].to_string();
         let rest = &s[end..];
         Some((name, rest))
@@ -211,9 +204,7 @@ fn parse_column_def(s: &str) -> Option<ColumnSchema> {
 fn parse_fk(s: &str) -> Option<ForeignKey> {
     let upper = s.to_uppercase();
     let fk_col_start = upper.find("FOREIGN KEY")? + 11;
-    let fk_col = extract_paren_content(&s[fk_col_start..])?
-        .trim()
-        .to_string();
+    let fk_col = extract_paren_content(&s[fk_col_start..])?.trim().to_string();
     let fk_col = fk_col.trim_matches(|c| c == '"' || c == '`').to_string();
 
     let ref_start = upper.find("REFERENCES")? + 10;

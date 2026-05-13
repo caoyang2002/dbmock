@@ -1,6 +1,6 @@
+use std::collections::{HashMap, HashSet, VecDeque};
 use crate::core::schema::Schema;
 use crate::errors::{MockerError, Result};
-use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Sort tables in dependency order using topological sort (Kahn's algorithm).
 /// Tables with no foreign keys come first; referenced tables come before referencing tables.

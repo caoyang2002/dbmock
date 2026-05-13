@@ -29,7 +29,6 @@ async fn main() {
 
 async fn run() -> Result<()> {
     let cli = Cli::parse();
-
     match cli.command {
         Commands::Extract(args) => handle_extract(args).await,
         Commands::Generate(args) => handle_generate(args).await,
@@ -38,12 +37,8 @@ async fn run() -> Result<()> {
 
 async fn handle_extract(args: cli::ExtractArgs) -> Result<()> {
     let config = build_db_config(
-        &args.db_type,
-        &args.db_host,
-        args.db_port,
-        &args.db_name,
-        &args.db_user,
-        &args.db_pass,
+        &args.db_type, &args.db_host, args.db_port,
+        &args.db_name, &args.db_user, &args.db_pass,
         args.database_url.as_deref(),
     )?;
 
@@ -57,12 +52,10 @@ async fn handle_extract(args: cli::ExtractArgs) -> Result<()> {
 
     let table_count = schema_obj.tables.len();
 
-    // Save JSON
     let json_path = Path::new(&args.output_json);
     schema::save_json(&schema_obj, json_path)?;
     println!("📄  Schema JSON saved to: {}", args.output_json);
 
-    // Save SQL
     let sql_path = Path::new(&args.output_sql);
     schema::save_sql(&schema_obj, sql_path)?;
     println!("📄  Schema SQL saved to: {}", args.output_sql);
@@ -72,31 +65,29 @@ async fn handle_extract(args: cli::ExtractArgs) -> Result<()> {
 }
 
 async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
-    // Parse row counts
+    // Parse --rows table=count pairs
     let mut row_counts: HashMap<String, usize> = HashMap::new();
     for entry in &args.rows {
         let parts: Vec<&str> = entry.splitn(2, '=').collect();
         if parts.len() != 2 {
             return Err(MockerError::Config {
-                message: format!("Invalid row spec '{}'. Expected format: table=count", entry),
+                message: format!("Invalid row spec '{}'. Expected: table=count", entry),
             });
         }
-        let table = parts[0].to_string();
         let count: usize = parts[1].parse().map_err(|_| MockerError::Config {
-            message: format!("Invalid count '{}' for table '{}'", parts[1], table),
+            message: format!("Invalid count '{}' for '{}'", parts[1], parts[0]),
         })?;
-        row_counts.insert(table, count);
+        row_counts.insert(parts[0].to_string(), count);
     }
 
     // Load schema
-    let schema_obj = if let Some(ref json_path) = args.schema_json {
-        println!("📂  Loading schema from JSON: {}", json_path);
-        schema::load_json(Path::new(json_path))?
-    } else if let Some(ref sql_path) = args.schema_sql {
-        println!("📂  Loading schema from SQL: {}", sql_path);
-        schema::load_sql(Path::new(sql_path))?
+    let schema_obj = if let Some(ref p) = args.schema_json {
+        println!("📂  Loading schema from JSON: {}", p);
+        schema::load_json(Path::new(p))?
+    } else if let Some(ref p) = args.schema_sql {
+        println!("📂  Loading schema from SQL: {}", p);
+        schema::load_sql(Path::new(p))?
     } else {
-        // Try default schema.json
         let default = Path::new("schema.json");
         if default.exists() {
             println!("📂  Loading schema from default schema.json");
@@ -108,28 +99,22 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
         }
     };
 
-    // Summary
     println!("📊  Tables to generate:");
-    let total_rows: usize = row_counts.values().sum();
-    for (table, count) in &row_counts {
-        println!("     • {} → {} rows", table, count);
+    let total: usize = row_counts.values().sum();
+    for (t, n) in &row_counts {
+        println!("     • {} → {} rows", t, n);
     }
-    println!("     Total: {} rows\n", total_rows);
+    println!("     Total: {} rows\n", total);
 
     if args.dry_run {
-        // Dry run: no DB connection needed
-        println!("🔬  Dry-run mode — printing SQL statements:\n");
-        let engine = build_dry_run_engine(&schema_obj.database_type);
+        println!("🔬  Dry-run mode — printing SQL:\n");
+        let engine = DryRunEngine { db_type: schema_obj.database_type.clone() };
         engine.generate(&schema_obj, &row_counts, true).await?;
         println!("\n✅  Dry run complete.");
     } else {
         let config = build_db_config(
-            &args.db_type,
-            &args.db_host,
-            args.db_port,
-            &args.db_name,
-            &args.db_user,
-            &args.db_pass,
+            &args.db_type, &args.db_host, args.db_port,
+            &args.db_name, &args.db_user, &args.db_pass,
             args.database_url.as_deref(),
         )?;
 
@@ -139,7 +124,6 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
 
         let engine = MockEngine::new(drv.clone());
         let report = engine.generate(&schema_obj, &row_counts, false).await?;
-
         drv.close().await;
 
         println!("\n📊  Generation complete:");
@@ -156,12 +140,7 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
     Ok(())
 }
 
-/// Build a mock engine that works without a real DB connection (dry-run)
-fn build_dry_run_engine(db_type: &str) -> DryRunEngine {
-    DryRunEngine {
-        db_type: db_type.to_string(),
-    }
-}
+// ── dry-run engine (no DB connection needed) ─────────────────────────────────
 
 struct DryRunEngine {
     db_type: String,
@@ -173,7 +152,7 @@ impl DataGenerator for DryRunEngine {
         &self,
         schema: &core::schema::Schema,
         row_counts: &HashMap<String, usize>,
-        dry_run: bool,
+        _dry_run: bool,
     ) -> Result<core::generator::GenerationReport> {
         use generator::batch::build_insert_batches;
         use generator::dependency::topological_sort;
@@ -182,23 +161,26 @@ impl DataGenerator for DryRunEngine {
         let sorted = topological_sort(schema, &requested)?;
 
         let mut report = core::generator::GenerationReport::default();
-        let mut fk_id_pools: HashMap<String, Vec<String>> = HashMap::new();
+        let mut fk_pools: HashMap<String, Vec<String>> = HashMap::new();
 
         for tname in &sorted {
             let count = *row_counts.get(tname).unwrap_or(&0);
-            if count == 0 {
-                continue;
-            }
-            let table_schema = schema.get_table(tname).unwrap();
-            let stmts = build_insert_batches(table_schema, count, &self.db_type, &fk_id_pools);
+            if count == 0 { continue; }
 
-            for stmt in &stmts {
-                println!("{};", stmt);
-                report.sql_statements.push(stmt.clone());
+            let ts = schema.get_table(tname).unwrap();
+            let self_ref_cols: Vec<String> = ts.foreign_keys.iter()
+                .filter(|fk| fk.referenced_table == *tname)
+                .map(|fk| fk.column.clone())
+                .collect();
+
+            let stmts = build_insert_batches(ts, count, &self.db_type, &fk_pools, &self_ref_cols);
+            for s in &stmts {
+                println!("{};", s);
+                report.sql_statements.push(s.clone());
             }
 
-            let pool: Vec<String> = (1..=(count as i64)).map(|i| i.to_string()).collect();
-            fk_id_pools.insert(tname.clone(), pool);
+            // Synthetic sequential pool for downstream FK references.
+            fk_pools.insert(tname.clone(), (1..=count).map(|i| i.to_string()).collect());
             report.tables_processed += 1;
         }
 
@@ -206,37 +188,33 @@ impl DataGenerator for DryRunEngine {
     }
 }
 
+// ── config builder ───────────────────────────────────────────────────────────
+
 fn build_db_config(
-    db_type: &str,
-    host: &str,
-    port: Option<u16>,
-    db_name: &str,
-    user: &str,
-    pass: &str,
+    db_type: &str, host: &str, port: Option<u16>,
+    db_name: &str, user: &str, pass: &str,
     url: Option<&str>,
 ) -> Result<DatabaseConfig> {
-    // Environment variable DATABASE_URL takes precedence
-    let database_url = url
-        .map(|s| s.to_string())
+    let database_url = url.map(|s| s.to_string())
         .or_else(|| std::env::var("DATABASE_URL").ok());
 
-    let parsed_type: DbType = db_type
-        .parse()
-        .map_err(|e: String| MockerError::Config { message: e })?;
+    let parsed_type: DbType = db_type.parse().map_err(|e: String| MockerError::Config {
+        message: e,
+    })?;
 
     let default_port = match parsed_type {
         DbType::Postgres => 5432,
-        DbType::MySQL => 3306,
-        DbType::SQLite => 0,
+        DbType::MySQL    => 3306,
+        DbType::SQLite   => 0,
     };
 
     Ok(DatabaseConfig {
-        db_type: parsed_type,
-        host: host.to_string(),
-        port: port.unwrap_or(default_port),
-        database: db_name.to_string(),
-        username: user.to_string(),
-        password: pass.to_string(),
+        db_type:      parsed_type,
+        host:         host.to_string(),
+        port:         port.unwrap_or(default_port),
+        database:     db_name.to_string(),
+        username:     user.to_string(),
+        password:     pass.to_string(),
         database_url,
     })
 }

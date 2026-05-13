@@ -1,9 +1,9 @@
-use crate::config::{DatabaseConfig, DbType};
-use crate::db::types::DbPool;
-use crate::errors::{MockerError, Result};
-use sqlx::mysql::MySqlPoolOptions;
 use sqlx::postgres::PgPoolOptions;
+use sqlx::mysql::MySqlPoolOptions;
 use sqlx::sqlite::SqlitePoolOptions;
+use crate::config::{DatabaseConfig, DbType};
+use crate::errors::{MockerError, Result};
+use crate::db::types::DbPool;
 
 pub async fn create_pool(config: &DatabaseConfig) -> Result<DbPool> {
     let conn_str = config.connection_string();
