@@ -1,9 +1,11 @@
-# datamocker
+# dbmock
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-**datamocker** 是一个高性能、可扩展的数据库 Mock 数据生成工具。它能自动识别数据库表结构（schema），并基于外键依赖关系，智能生成符合数据类型和业务约束的随机测试数据。
+**dbmock** 是一个高性能、可扩展的数据库 Mock 数据生成工具。它能自动识别数据库表结构（schema），并基于外键依赖关系，智能生成符合数据类型和业务约束的随机测试数据。
+
+> 本项目是 TinyForum 项目的附属项目，旨在快速填充数据库，便于进行 TinyForum 的逻辑检验和性能测试，因而本项目会有 TinyForum 的数据，目前正在逐步清理，如有问题请提 Issues，感谢～
 
 ## 一、特性
 
@@ -19,17 +21,26 @@
 
 ### 安装
 
+手动构建：
+
 ```bash
-git clone https://github.com/yourusername/datamocker.git
-cd datamocker
+git clone https://github.com/yourusername/dbmock.git
+cd dbmock
 cargo build --release
-# 二进制位于 target/release/datamocker
+# 二进制位于 target/release/dbmock
+```
+
+make 自动构建
+
+```bash
+make build
+# 二进制会自动复制到根目录
 ```
 
 或直接从源码运行：
 
 ```bash
-cargo run -- [COMMAND] [OPTIONS]
+cargo run
 ```
 
 ### 基本用法
@@ -37,24 +48,46 @@ cargo run -- [COMMAND] [OPTIONS]
 #### 1. 导出数据库结构
 
 ```bash
-datamocker extract --db-type postgres --db-host localhost --db-port 5432 --db-name mydb --db-user user --db-pass pass -o schema.json
-# datamocker extract --db-type postgres --db-host localhost --db-port 5432 --db-name tiny_forum --db-user simons --db-pass password -o schema.json
+dbmock extract --db-type postgres --db-host localhost --db-port 5432 --db-name your_db_name --db-user user_name --db-pass user_password -j schema.json -s schema.sql
+# dbmock extract --db-type postgres --db-host localhost --db-port 5432 --db-name tiny_forum --db-user simons --db-pass password -j schema.json
 ```
+> 注意：默认会创建 schema.sql 和 schema.json `-j` 和 `-s` 仅仅是命名，而非决定是否创建对应文件。
 
-或者使用 
+也可以使用环境变量配置数据库 URL：
 
 ```bash
-pg_dump -s -n public -d your_database_name > schema.sql
+export DATABASE_URL="postgresql://username:password@localhost/mydb"
+# export DATABASE_URL="postgresql://simons:tf-password@localhost/tiny_forum"
+dbmock extract
+```
+
+> **重要提示**
+>
+> 由于数据库可能有多种字段策略（类型），例如字符串，数字、指定的枚举类型、不可重复、外键关联等，无论是 pg_dump 程序还是 extract 子命令都无法导出，因而使用 config 命令生成 `config.yml` 配置文件 ，随后根据 `config.yml` 文件中相关的注释进行配置。
+> 如果是简单数据库，则无需使用该命令。
+
+#### 2. 生成配置文件
+
+该命令会读取上一个步骤生成的 json 文件，默认读取 `schema.json`，如果有重命名，请使用 `-j filename.json` 设置文件名
+
+```bash
+./dbmock config
 ```
 
 #### 2. 生成 Mock 数据
 
+该命令会全量创建数据库，默认 10 条数据
+
+```bash
+dbmock generate
+```
+
 ```bash
 # 预览（dry‑run）
-datamocker generate --schema schema.json --rows users=100 --rows posts=500 --dry-run
+dbmock generate --schema schema.json --rows users=100 --rows posts=500 --previwe
 
 # 真正执行
-datamocker generate --schema schema.json --rows users=100 --rows posts=500
+dbmock generate --schema schema.json --rows users=100 --rows posts=500
 ```
 
 #### 3. 使用环境变量
@@ -62,7 +95,7 @@ datamocker generate --schema schema.json --rows users=100 --rows posts=500
 ```bash
 export DATABASE_URL="postgresql://username:password@localhost/mydb"
 # export DATABASE_URL="postgresql://simons:tf-password@localhost/tiny_forum"
-datamocker extract -j schema.json
+dbmock extract -j schema.json
 ```
 
 ```bash
@@ -104,7 +137,7 @@ datamocker extract -j schema.json
 ## 四、项目结构
 
 ```
-datamocker/
+dbmock/
 ├── src/
 │   ├── cli/            # 命令行解析
 │   ├── config/         # 配置管理

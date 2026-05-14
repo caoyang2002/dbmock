@@ -88,7 +88,7 @@ async fn handle_config(args: cli::ConfigArgs) -> Result<()> {
     if !schema_path.exists() {
         return Err(MockerError::Config {
             message: format!(
-                "Schema file '{}' not found. Run `datamocker extract` first.",
+                "Schema file '{}' not found. Run `dbmock extract` first.",
                 args.schema_json
             ),
         });
@@ -155,7 +155,7 @@ async fn handle_config(args: cli::ConfigArgs) -> Result<()> {
     println!();
     println!("   Edit the file to customise field generators, then run:");
     println!(
-        "   datamocker generate -j {} -c {} --rows <table>=<count>",
+        "   dbmock generate -j {} -c {} --rows <table>=<count>",
         args.schema_json, args.output
     );
 
@@ -183,6 +183,40 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
             message: format!("Invalid row count '{}' for table '{}'", parts[1], parts[0]),
         })?;
         row_counts.insert(parts[0].to_string(), count);
+    }
+    // 如果没有提供 --rows 参数，则从 config.yml 中读取表名，每表默认 10 行
+    if row_counts.is_empty() {
+        // 确定 mock config 文件路径
+        let cfg_path = if let Some(ref path) = args.mock_config {
+            Path::new(path).to_path_buf()
+        } else {
+            // 默认尝试当前目录下的 mock_config.yml
+            Path::new("mock_config.yml").to_path_buf()
+        };
+
+        if !cfg_path.exists() {
+            return Err(MockerError::Config {
+                message: format!(
+                    "No --rows provided and no mock config file found at '{}'. Please provide either --rows or a valid mock config file.",
+                    cfg_path.display()
+                ),
+            });
+        }
+
+        println!(
+            "⚙️   Loading mock config: {} (to get table list)",
+            cfg_path.display()
+        );
+        let mc = fieldconfig::serialize::load_config(&cfg_path)?;
+        for table_name in mc.keys() {
+            row_counts.insert(table_name.clone(), 10);
+        }
+        if row_counts.is_empty() {
+            return Err(MockerError::Config {
+                message: "Mock config file contains no tables.".into(),
+            });
+        }
+        println!("📊  No --rows provided, will generate 10 rows for each table in config.");
     }
 
     // ── load schema ──────────────────────────────────────────────────────────

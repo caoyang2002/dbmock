@@ -426,7 +426,7 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
     // ── user-agent string ────────────────────────────────────────────────────
     if contains_any(&n, &["user_agent", "useragent", "agent"]) {
         return sql_str(format!(
-            "Mozilla/5.0 (compatible; datamocker/{})",
+            "Mozilla/5.0 (compatible; dbmock/{})",
             gen_alphanum(4)
         ));
     }

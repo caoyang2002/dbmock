@@ -1,6 +1,6 @@
 .PHONY: help db-json env run
 
-BIN :=  ./target/release/datamocker
+BIN :=  ./target/release/dbmock
 # 如果 .env 比 env.mk 新，则重新生成 env.mk
 env.mk: .env
 	@echo "# Auto-generated from .env" > $@
@@ -28,14 +28,19 @@ db-sql:
 build:
 	@echo "构建..."
 	@cargo build --release
-	@cp ./target/release/datamocker ./datamocker
+	@cp ./target/release/dbmock ./dbmock
 
 log:
-	@RUST_LOG=sqlx::query=debug ./datamocker extract -j schema.json 2> sql.log
+	@RUST_LOG=sqlx::query=debug ./dbmock extract -j schema.json 2> sql.log
 
 test:
 	@echo "测试..."
 	@$(BIN)
+clear:
+	@rm -f schema.json
+	@rm -f schema.sql
+	@rm -f env.mk
+	@rm -f mock_config.yml
 
 help:
 	@echo "Available targets:"

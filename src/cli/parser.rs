@@ -1,19 +1,19 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "datamocker",
+    name = "dbmock",
     version = "0.1.0",
-    author = "datamocker contributors",
+    author = "dbmock contributors",
     about = "High-performance database mock data generator",
     long_about = concat!(
-        "datamocker reads your database schema and generates realistic mock data\n",
+        "dbmock reads your database schema and generates realistic mock data\n",
         "that respects foreign-key constraints.\n\n",
         "Typical workflow:\n",
-        "  1. datamocker extract  -d <URL> -j schema.json\n",
-        "  2. datamocker config   -j schema.json -o mock_config.yml\n",
+        "  1. dbmock extract  -d <URL> -j schema.json\n",
+        "  2. dbmock config   -j schema.json -o mock_config.yml\n",
         "     (edit mock_config.yml to customise column generators)\n",
-        "  3. datamocker generate -j schema.json -c mock_config.yml \\\n",
+        "  3. dbmock generate -j schema.json -c mock_config.yml \\\n",
         "                         --rows users=100 --rows posts=500"
     )
 )]
@@ -41,7 +41,7 @@ pub enum Commands {
 #[derive(Args, Debug)]
 pub struct ExtractArgs {
     /// Output JSON schema file path
-    #[arg(short = 'j', long = "output", default_value = "schema.json")]
+    #[arg(short = 'j', long = "json", default_value = "schema.json")]
     pub output_json: String,
 
     /// Output SQL file path (CREATE TABLE statements)
@@ -125,7 +125,7 @@ pub struct GenerateArgs {
         short = 'r',
         long = "rows",
         value_name = "TABLE=COUNT",
-        required = true
+        // required = true
     )]
     pub rows: Vec<String>,
 

@@ -16,9 +16,8 @@ use crate::generator::value::generate_value; // fallback
 
 // ── per-column unique counters ────────────────────────────────────────────────
 // Key: "table.column" → counter
-static UNIQUE_COUNTERS: std::sync::OnceLock<
-    std::sync::Mutex<HashMap<String, u64>>
-> = std::sync::OnceLock::new();
+static UNIQUE_COUNTERS: std::sync::OnceLock<std::sync::Mutex<HashMap<String, u64>>> =
+    std::sync::OnceLock::new();
 
 fn next_unique(key: &str) -> u64 {
     let mut map = UNIQUE_COUNTERS
@@ -50,22 +49,22 @@ pub fn generate_with_config(
     db_type: &str,
 ) -> Option<String> {
     // Honour null_rate override (or keep the 15% default for nullable cols).
-    let null_rate = fc.null_rate.unwrap_or(if col.is_nullable { 0.15 } else { 0.0 });
+    let null_rate = fc
+        .null_rate
+        .unwrap_or(if col.is_nullable { 0.15 } else { 0.0 });
     if null_rate > 0.0 && rand::thread_rng().gen_bool(null_rate.clamp(0.0, 1.0)) {
         return Some("NULL".to_string());
     }
 
     let val = match &fc.kind {
         // ── meta ─────────────────────────────────────────────────────────────
-        FieldKind::Default  => return None, // caller falls back to schema-driven
-        FieldKind::Skip     => return Some("__SKIP__".to_string()), // sentinel
-        FieldKind::Null     => "NULL".to_string(),
-        FieldKind::Constant => {
-            sql_str(fc.constant.clone().unwrap_or_default())
-        }
+        FieldKind::Default => return None, // caller falls back to schema-driven
+        FieldKind::Skip => return Some("__SKIP__".to_string()), // sentinel
+        FieldKind::Null => "NULL".to_string(),
+        FieldKind::Constant => sql_str(fc.constant.clone().unwrap_or_default()),
 
         // ── identity ─────────────────────────────────────────────────────────
-        FieldKind::Uuid   => sql_str(Uuid::new_v4().to_string()),
+        FieldKind::Uuid => sql_str(Uuid::new_v4().to_string()),
         FieldKind::Unique => {
             let n = next_unique(unique_key);
             // Use the column's base type to shape the unique value.
@@ -97,10 +96,10 @@ pub fn generate_with_config(
         }
         FieldKind::Decimal => {
             let scale = fc.scale.unwrap_or(2);
-            let lo    = fc.min.unwrap_or(0.0);
-            let hi    = fc.max.unwrap_or(999_999.0);
-            let hi    = if hi <= lo { lo + 1.0 } else { hi };
-            let v     = rand::thread_rng().gen_range(lo..hi);
+            let lo = fc.min.unwrap_or(0.0);
+            let hi = fc.max.unwrap_or(999_999.0);
+            let hi = if hi <= lo { lo + 1.0 } else { hi };
+            let v = rand::thread_rng().gen_range(lo..hi);
             format!("{:.prec$}", v, prec = scale)
         }
 
@@ -109,16 +108,24 @@ pub fn generate_with_config(
             let b = rand::thread_rng().gen_bool(0.5);
             let dt = col.data_type.to_lowercase();
             if dt.contains("bool") {
-                if b { "true".to_string() } else { "false".to_string() }
+                if b {
+                    "true".to_string()
+                } else {
+                    "false".to_string()
+                }
             } else {
-                if b { "1".to_string() } else { "0".to_string() }
+                if b {
+                    "1".to_string()
+                } else {
+                    "0".to_string()
+                }
             }
         }
 
         // ── text ─────────────────────────────────────────────────────────────
         FieldKind::String => {
-            let lo  = fc.min_len.unwrap_or(4);
-            let hi  = fc.max_len.unwrap_or(32).max(lo + 1);
+            let lo = fc.min_len.unwrap_or(4);
+            let hi = fc.max_len.unwrap_or(32).max(lo + 1);
             let len = rand::thread_rng().gen_range(lo..=hi);
             sql_str(gen_alphanum(len))
         }
@@ -129,7 +136,11 @@ pub fn generate_with_config(
                 .map(|_| gen_word(rand::thread_rng().gen_range(3..=9)))
                 .collect();
             let s = words.join(" ");
-            let s = if s.len() > max { s[..max].to_string() } else { s };
+            let s = if s.len() > max {
+                s[..max].to_string()
+            } else {
+                s
+            };
             sql_str(s)
         }
         FieldKind::Label => {
@@ -176,7 +187,12 @@ pub fn generate_with_config(
         }
         FieldKind::Semver => {
             let mut rng = rand::thread_rng();
-            sql_str(format!("{}.{}.{}", rng.gen_range(0..=5), rng.gen_range(0..=20), rng.gen_range(0..=99)))
+            sql_str(format!(
+                "{}.{}.{}",
+                rng.gen_range(0..=5),
+                rng.gen_range(0..=20),
+                rng.gen_range(0..=99)
+            ))
         }
 
         // ── personal ─────────────────────────────────────────────────────────
@@ -188,23 +204,27 @@ pub fn generate_with_config(
         }
         FieldKind::Phone => {
             let mut rng = rand::thread_rng();
-            let cc: u16  = rng.gen_range(1..=99);
+            let cc: u16 = rng.gen_range(1..=99);
             let sub: u64 = rng.gen_range(100_000_000..=9_999_999_999);
             sql_str(format!("+{}{}", cc, sub))
         }
-        FieldKind::Color => {
-            sql_str(format!("#{:06X}", rand::thread_rng().gen_range(0_u32..=0xFF_FF_FF)))
-        }
-        FieldKind::UserAgent => {
-            sql_str(format!("Mozilla/5.0 (compatible; datamocker/{})", gen_alphanum(4)))
-        }
+        FieldKind::Color => sql_str(format!(
+            "#{:06X}",
+            rand::thread_rng().gen_range(0_u32..=0xFF_FF_FF)
+        )),
+        FieldKind::UserAgent => sql_str(format!(
+            "Mozilla/5.0 (compatible; dbmock/{})",
+            gen_alphanum(4)
+        )),
 
         // ── date / time ──────────────────────────────────────────────────────
         FieldKind::TimestampTz => {
             let (from, to) = parse_date_range(fc);
             let offset_days = rand::thread_rng().gen_range(0..=(to - from).num_days().max(0));
             let secs: i64 = rand::thread_rng().gen_range(0..=86_399);
-            let ts = (from + Duration::days(offset_days)).and_hms_opt(0, 0, 0).unwrap()
+            let ts = (from + Duration::days(offset_days))
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
                 + Duration::seconds(secs);
             sql_str(ts.format("%Y-%m-%d %H:%M:%S+00").to_string())
         }
@@ -212,7 +232,9 @@ pub fn generate_with_config(
             let (from, to) = parse_date_range(fc);
             let offset_days = rand::thread_rng().gen_range(0..=(to - from).num_days().max(0));
             let secs: i64 = rand::thread_rng().gen_range(0..=86_399);
-            let ts = (from + Duration::days(offset_days)).and_hms_opt(0, 0, 0).unwrap()
+            let ts = (from + Duration::days(offset_days))
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
                 + Duration::seconds(secs);
             sql_str(ts.format("%Y-%m-%d %H:%M:%S").to_string())
         }
@@ -236,16 +258,24 @@ pub fn generate_with_config(
         FieldKind::Json => {
             let mut rng = rand::thread_rng();
             let n = rng.gen_range(1_usize..=4);
-            let pairs: Vec<String> = (0..n).map(|i| {
-                let k = gen_alphanum(rng.gen_range(3..=8));
-                let v = match i % 4 {
-                    0 => rng.gen_range(0_i64..=9_999).to_string(),
-                    1 => format!("\"{}\"", gen_alphanum(rng.gen_range(4..=10))),
-                    2 => if rng.gen_bool(0.5) { "true".into() } else { "false".into() },
-                    _ => format!("{:.2}", rng.gen_range(0.0_f64..=100.0)),
-                };
-                format!("\"{}\":{}", k, v)
-            }).collect();
+            let pairs: Vec<String> = (0..n)
+                .map(|i| {
+                    let k = gen_alphanum(rng.gen_range(3..=8));
+                    let v = match i % 4 {
+                        0 => rng.gen_range(0_i64..=9_999).to_string(),
+                        1 => format!("\"{}\"", gen_alphanum(rng.gen_range(4..=10))),
+                        2 => {
+                            if rng.gen_bool(0.5) {
+                                "true".into()
+                            } else {
+                                "false".into()
+                            }
+                        }
+                        _ => format!("{:.2}", rng.gen_range(0.0_f64..=100.0)),
+                    };
+                    format!("\"{}\":{}", k, v)
+                })
+                .collect();
             sql_str(format!("{{{}}}", pairs.join(",")))
         }
     };
@@ -258,10 +288,14 @@ pub fn generate_with_config(
 /// Parse date_from / date_to from FieldConfig, defaulting to a 5-year window.
 fn parse_date_range(fc: &FieldConfig) -> (NaiveDate, NaiveDate) {
     let today = Utc::now().date_naive();
-    let from = fc.date_from.as_deref()
+    let from = fc
+        .date_from
+        .as_deref()
         .and_then(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
         .unwrap_or_else(|| today - Duration::days(1_825));
-    let to = fc.date_to.as_deref()
+    let to = fc
+        .date_to
+        .as_deref()
         .and_then(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
         .unwrap_or(today);
     let (from, to) = if from <= to { (from, to) } else { (to, from) };
@@ -275,26 +309,34 @@ fn sql_str(s: String) -> String {
 fn gen_alphanum(len: usize) -> String {
     const C: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
     let mut rng = rand::thread_rng();
-    (0..len.max(1)).map(|_| C[rng.gen_range(0..C.len())] as char).collect()
+    (0..len.max(1))
+        .map(|_| C[rng.gen_range(0..C.len())] as char)
+        .collect()
 }
 
 fn gen_base64url(len: usize) -> String {
     const C: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     let mut rng = rand::thread_rng();
-    (0..len).map(|_| C[rng.gen_range(0..C.len())] as char).collect()
+    (0..len)
+        .map(|_| C[rng.gen_range(0..C.len())] as char)
+        .collect()
 }
 
 fn gen_word(len: usize) -> String {
     let mut rng = rand::thread_rng();
-    (0..len.max(1)).map(|_| rng.gen_range(b'a'..=b'z') as char).collect()
+    (0..len.max(1))
+        .map(|_| rng.gen_range(b'a'..=b'z') as char)
+        .collect()
 }
 
 fn gen_capitalized_word(len: usize) -> String {
-    if len == 0 { return String::new(); }
+    if len == 0 {
+        return String::new();
+    }
     let w = gen_word(len);
     let mut c = w.chars();
     match c.next() {
-        None    => String::new(),
+        None => String::new(),
         Some(h) => h.to_uppercase().to_string() + c.as_str(),
     }
 }
@@ -305,7 +347,11 @@ fn gen_slug(max_len: usize) -> String {
         .map(|_| gen_word(rand::thread_rng().gen_range(3..=7)))
         .collect();
     let s = words.join("-");
-    if s.len() > max_len { s[..max_len].to_string() } else { s }
+    if s.len() > max_len {
+        s[..max_len].to_string()
+    } else {
+        s
+    }
 }
 
 fn pick_tld() -> &'static str {
@@ -314,8 +360,19 @@ fn pick_tld() -> &'static str {
 }
 
 fn is_int_type(dt: &str) -> bool {
-    matches!(dt,
-        "smallint"|"int2"|"int"|"int4"|"integer"|"bigint"|"int8"|
-        "tinyint"|"mediumint"|"serial"|"bigserial"|"smallserial"
+    matches!(
+        dt,
+        "smallint"
+            | "int2"
+            | "int"
+            | "int4"
+            | "integer"
+            | "bigint"
+            | "int8"
+            | "tinyint"
+            | "mediumint"
+            | "serial"
+            | "bigserial"
+            | "smallserial"
     ) || (dt.contains("int") && !dt.contains("point"))
 }

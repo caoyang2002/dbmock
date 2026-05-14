@@ -1,12 +1,12 @@
 [package]
-name = "datamocker"
+name = "dbmock"
 version = "0.1.0"
 edition = "2021"
 description = "A high-performance, extensible database mock data generation tool"
 license = "MIT"
 
 [[bin]]
-name = "datamocker"
+name = "dbmock"
 path = "src/main.rs"
 
 [dependencies]

@@ -16,7 +16,7 @@ use crate::fieldconfig::types::{FieldConfig, FieldKind};
 /// Generate a mock_config.yml from a Schema and write it to `path`.
 pub fn export_config(schema: &Schema, path: &Path) -> Result<()> {
     let config = infer_mock_config(schema);
-    let yaml   = render_config_yaml(&config, schema);
+    let yaml = render_config_yaml(&config, schema);
     std::fs::write(path, yaml)?;
     Ok(())
 }
@@ -24,8 +24,8 @@ pub fn export_config(schema: &Schema, path: &Path) -> Result<()> {
 /// Load a MockConfig from a YAML file.
 pub fn load_config(path: &Path) -> Result<MockConfig> {
     let content = std::fs::read_to_string(path)?;
-    let config: MockConfig = serde_yaml::from_str(&content)
-        .map_err(|e| crate::errors::MockerError::Config {
+    let config: MockConfig =
+        serde_yaml::from_str(&content).map_err(|e| crate::errors::MockerError::Config {
             message: format!("Failed to parse mock config YAML: {}", e),
         })?;
     Ok(config)
@@ -86,7 +86,7 @@ fn render_config_yaml(config: &MockConfig, schema: &Schema) -> String {
 // ── file header constant ─────────────────────────────────────────────────────
 
 const FILE_HEADER: &str = r#"# =============================================================================
-# datamocker — Mock Data Configuration
+# dbmock — Mock Data Configuration
 # =============================================================================
 #
 # This file controls how each column's mock data is generated.

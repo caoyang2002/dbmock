@@ -5,5 +5,5 @@ schema.sql
 .DS_Store
 mock_config.yml
 env.mk
-datamocker
+dbmock
 config.yml
