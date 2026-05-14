@@ -257,6 +257,7 @@ enum ColStrategy<'a> {
     Generate,
 }
 
+//
 fn resolve_strategy<'a>(
     col: &ColumnSchema,
     table: &TableSchema,

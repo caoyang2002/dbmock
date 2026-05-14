@@ -4,7 +4,7 @@ use sqlx::{Pool, Postgres, Row};
 use crate::core::driver::DatabaseDriver;
 use crate::core::schema::{ColumnSchema, ForeignKey, Schema, TableSchema};
 use crate::errors::{MockerError, Result};
-
+use std::collections::HashMap;
 pub struct PostgresDriver {
     pool: Pool<Postgres>,
 }
@@ -256,28 +256,64 @@ impl PostgresDriver {
     }
 
     async fn fetch_unique_constraints(&self, table: &str) -> Result<Vec<Vec<String>>> {
+        use std::collections::HashMap;
+
         let rows = sqlx::query(
-            "SELECT kcu.constraint_name, kcu.column_name \
-             FROM information_schema.table_constraints tc \
-             JOIN information_schema.key_column_usage kcu \
-                ON tc.constraint_name = kcu.constraint_name \
-                AND tc.table_schema   = kcu.table_schema \
-             WHERE tc.constraint_type = 'UNIQUE' \
-               AND tc.table_schema = 'public' \
-               AND tc.table_name   = $1 \
-             ORDER BY kcu.constraint_name, kcu.ordinal_position",
+            r#"
+            -- 显式 UNIQUE 约束（来自 information_schema）
+            SELECT
+                kcu.constraint_name,
+                kcu.column_name,
+                kcu.ordinal_position
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+                ON tc.constraint_name = kcu.constraint_name
+                AND tc.table_schema   = kcu.table_schema
+            WHERE tc.constraint_type = 'UNIQUE'
+              AND tc.table_schema = current_schema()    -- 动态获取当前模式
+              AND tc.table_name   = $1
+
+            UNION ALL
+
+            -- 唯一索引（来自 pg_index）
+            SELECT
+                i.relname AS constraint_name,
+                a.attname AS column_name,
+                a.attnum  AS ordinal_position
+            FROM pg_index idx
+            JOIN pg_class i ON i.oid = idx.indexrelid
+            JOIN pg_class t ON t.oid = idx.indrelid
+            JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(idx.indkey)
+            WHERE t.relname = $1
+              AND t.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema())
+              AND idx.indisunique = true
+              AND NOT EXISTS (
+                  SELECT 1 FROM information_schema.table_constraints tc
+                  WHERE tc.constraint_name = i.relname
+                    AND tc.constraint_type = 'UNIQUE'
+              )
+            "#,
         )
         .bind(table)
         .fetch_all(&self.pool)
         .await?;
 
-        let mut map: std::collections::HashMap<String, Vec<String>> =
-            std::collections::HashMap::new();
-        for row in &rows {
-            let c: String = row.get("constraint_name");
-            let k: String = row.get("column_name");
-            map.entry(c).or_default().push(k);
+        // 按约束名分组，并确保列按 ordinal_position 排序
+        let mut map: HashMap<String, Vec<(String, i32)>> = HashMap::new();
+        for row in rows {
+            let constraint_name: String = row.get(0);
+            let column_name: String = row.get(1);
+            let ordinal_position: i32 = row.get(2);
+            map.entry(constraint_name)
+                .or_default()
+                .push((column_name, ordinal_position));
         }
-        Ok(map.into_values().collect())
+
+        let mut result = Vec::new();
+        for (_, mut cols) in map {
+            cols.sort_by_key(|(_, pos)| *pos);
+            result.push(cols.into_iter().map(|(name, _)| name).collect());
+        }
+        Ok(result)
     }
 }
