@@ -18,6 +18,8 @@ use async_trait::async_trait;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use tokio::sync::Semaphore;
 
+use crate::config::tuning;
+use crate::config::TuningParams;
 use crate::core::driver::DatabaseDriver;
 use crate::core::generator::{DataGenerator, GenerationReport};
 use crate::core::schema::Schema;
@@ -29,25 +31,34 @@ use crate::generator::dependency::topological_sort;
 
 // ── tuning constants ──────────────────────────────────────────────────────────
 
+//
 /// Rows per INSERT statement.
-const INSERT_ROWS: usize = 1_000;
+// const INSERT_ROWS: usize = 5_000;
 
-/// How many INSERT statements to send concurrently per table.
-const CONCURRENCY: usize = 10;
+// /// How many INSERT statements to send concurrently per table.
+// const CONCURRENCY: usize = 10;
 
-/// Maximum number of FK IDs we keep in memory per referenced table.
-/// A random sample of this size gives good distribution.
-const FK_POOL_CAP: usize = 5_000;
+// /// Maximum number of FK IDs we keep in memory per referenced table.
+// /// A random sample of this size gives good distribution.
+// const FK_POOL_CAP: usize = 8_000;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub struct MockEngine {
     driver: Arc<dyn DatabaseDriver>,
+    insert_rows: usize,
+    concurrency: usize,
+    fk_pool_cap: usize,
 }
 
 impl MockEngine {
-    pub fn new(driver: Arc<dyn DatabaseDriver>) -> Self {
-        Self { driver }
+    pub fn new(driver: Arc<dyn DatabaseDriver>, tuning: TuningParams) -> Self {
+        Self {
+            driver,
+            insert_rows: tuning.insert_rows,
+            concurrency: tuning.concurrency,
+            fk_pool_cap: tuning.fk_pool_cap,
+        }
     }
 }
 
@@ -85,7 +96,7 @@ impl DataGenerator for MockEngine {
                 let pk_col = pk_col_name(schema, &ref_table);
                 if let Ok(ids) = self
                     .driver
-                    .query_ids(&ref_table, &pk_col, FK_POOL_CAP)
+                    .query_ids(&ref_table, &pk_col, self.fk_pool_cap)
                     .await
                 {
                     if !ids.is_empty() {
@@ -146,13 +157,16 @@ impl DataGenerator for MockEngine {
                     &fk_pools,
                     &self_ref_cols,
                     table_cfg,
-                    INSERT_ROWS,
+                    self.insert_rows,
                 );
                 for s in &stmts {
                     println!("{};", s);
                     report.sql_statements.push(s.clone());
                 }
-                fk_pools.insert(table_name.clone(), synthetic_pool(row_count));
+                fk_pools.insert(
+                    table_name.clone(),
+                    synthetic_pool(row_count, self.fk_pool_cap),
+                );
                 bar.finish_with_message(format!("{} (dry-run)", table_name));
                 overall.inc(row_count as u64);
                 report.tables_processed += 1;
@@ -168,6 +182,7 @@ impl DataGenerator for MockEngine {
                 let fk_pools2 = fk_pools.clone();
                 let src2 = self_ref_cols.clone();
                 let tc2 = table_cfg.cloned();
+                let insert_rows = self.insert_rows;
                 tokio::task::spawn_blocking(move || {
                     build_insert_batches(
                         &ts2,
@@ -176,7 +191,7 @@ impl DataGenerator for MockEngine {
                         &fk_pools2,
                         &src2,
                         tc2.as_ref(),
-                        INSERT_ROWS,
+                        insert_rows,
                     )
                 })
                 .await
@@ -191,19 +206,20 @@ impl DataGenerator for MockEngine {
             // We collect IDs only from the first FK_POOL_CAP rows so we can
             // seed downstream tables — after that we discard RETURNING results.
             let need_ids = !fk_pools.contains_key(table_name);
-            let mut collected_ids: Vec<String> = Vec::with_capacity(FK_POOL_CAP.min(row_count));
+            let mut collected_ids: Vec<String> =
+                Vec::with_capacity(self.fk_pool_cap.min(row_count));
             let mut inserted: u64 = 0;
             let mut errors: Vec<String> = Vec::new();
 
             // Semaphore limits in-flight concurrent INSERT tasks.
-            let sem = Arc::new(Semaphore::new(CONCURRENCY));
+            let sem = Arc::new(Semaphore::new(self.concurrency));
             let mut handles = Vec::with_capacity(n_stmts);
 
             for (i, sql) in stmts.into_iter().enumerate() {
                 let permit = sem.clone().acquire_owned().await.unwrap();
                 let driver = self.driver.clone();
                 let pk2 = pk_col.clone();
-                let want_ids = need_ids && collected_ids.len() < FK_POOL_CAP;
+                let want_ids = need_ids && collected_ids.len() < self.fk_pool_cap;
                 let rows_in_batch = sql
                     .bytes()
                     .filter(|&b| b == b'(')
@@ -212,7 +228,7 @@ impl DataGenerator for MockEngine {
                     .max(1) as u64;
                 // More accurate: count VALUE tuples.
                 // We'll just use INSERT_ROWS as the expected count per batch.
-                let expected_rows = INSERT_ROWS as u64;
+                let expected_rows = self.insert_rows as u64;
 
                 handles.push(tokio::spawn(async move {
                     let result = if want_ids {
@@ -233,12 +249,12 @@ impl DataGenerator for MockEngine {
                 match handle.await {
                     Ok(Ok((n, ids))) => {
                         inserted += n;
-                        if need_ids && collected_ids.len() < FK_POOL_CAP {
-                            let remaining = FK_POOL_CAP - collected_ids.len();
+                        if need_ids && collected_ids.len() < self.fk_pool_cap {
+                            let remaining = self.fk_pool_cap - collected_ids.len();
                             collected_ids.extend(ids.into_iter().take(remaining));
                         }
-                        bar.inc(n.min(INSERT_ROWS as u64));
-                        overall.inc(n.min(INSERT_ROWS as u64));
+                        bar.inc(n.min(self.insert_rows as u64));
+                        overall.inc(n.min(self.insert_rows as u64));
                     }
                     Ok(Err(e)) => {
                         let msg = format!("Error inserting into {}: {}", table_name, e);
@@ -263,19 +279,25 @@ impl DataGenerator for MockEngine {
                 // Try a lightweight re-query for a sample
                 if let Ok(ids) = self
                     .driver
-                    .query_ids(table_name, &pk_col, FK_POOL_CAP)
+                    .query_ids(table_name, &pk_col, self.fk_pool_cap)
                     .await
                 {
                     fk_pools.insert(table_name.clone(), ids);
                 } else {
-                    fk_pools.insert(table_name.clone(), synthetic_pool(inserted as usize));
+                    fk_pools.insert(
+                        table_name.clone(),
+                        synthetic_pool(inserted as usize, self.fk_pool_cap),
+                    );
                 }
             } else if !collected_ids.is_empty() {
                 fk_pools.insert(table_name.clone(), collected_ids);
             } else {
                 // Already had a pool or no IDs needed
                 if !fk_pools.contains_key(table_name) {
-                    fk_pools.insert(table_name.clone(), synthetic_pool(inserted as usize));
+                    fk_pools.insert(
+                        table_name.clone(),
+                        synthetic_pool(inserted as usize, self.fk_pool_cap),
+                    );
                 }
             }
 
@@ -311,7 +333,7 @@ fn pk_col_name(schema: &Schema, table_name: &str) -> String {
 }
 
 /// A small sequential pool used when real IDs are unavailable.
-fn synthetic_pool(count: usize) -> Vec<String> {
-    let cap = count.min(FK_POOL_CAP);
+fn synthetic_pool(count: usize, fk_pool_cap: usize) -> Vec<String> {
+    let cap = count.min(fk_pool_cap);
     (1..=cap).map(|i| i.to_string()).collect()
 }

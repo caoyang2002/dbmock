@@ -8,6 +8,8 @@ mod errors;
 mod fieldconfig;
 mod generator;
 mod schema;
+use crate::config::auto_tune;
+use crate::config::TuningParams;
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -246,8 +248,12 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
     println!("🔌  Connecting to {} database...", db_cfg.db_type);
     let drv = driver::create_driver(&db_cfg).await?;
     println!("✅  Connected.\n");
-
-    let engine = MockEngine::new(drv.clone());
+    let tuning = auto_tune(Some(10));
+    println!(
+        "并发执行数量: {}\n每个被引用的表在内存中缓存的主键值数量: {}\n单次发送行数: {}",
+        tuning.concurrency, tuning.fk_pool_cap, tuning.insert_rows
+    );
+    let engine = MockEngine::new(drv.clone(), tuning);
     let report = engine
         .generate(&schema_obj, &row_counts, false, mock_config.as_ref())
         .await?;

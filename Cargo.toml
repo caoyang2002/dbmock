@@ -33,6 +33,8 @@ fake = { version = "2.9", features = ["derive", "chrono", "uuid"] }
 indicatif = "0.17"
 serde_yaml = "0.9"
 once_cell = "1.21.4"
+num_cpus = "1.16"
+sys-info = "0.9"
 
 [profile.release]
 opt-level = 3
