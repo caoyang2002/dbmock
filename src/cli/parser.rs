@@ -160,4 +160,8 @@ pub struct GenerateArgs {
     /// Full connection URL
     #[arg(short = 'd', long)]
     pub database_url: Option<String>,
+
+    /// Debug
+    #[arg(long, global = true)]
+    pub debug: bool,
 }

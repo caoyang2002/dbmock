@@ -57,8 +57,24 @@ dbmock extract --db-type postgres --db-host localhost --db-port 5432 --db-name y
 
 ```bash
 export DATABASE_URL="postgresql://username:password@localhost/mydb"
-# export DATABASE_URL="postgresql://simons:tf-password@localhost/tiny_forum"
+# export DATABASE_URL="postgresql://tinyforum:tf-password@localhost:5678/tiny_forum"
 dbmock extract
+```
+
+如果文件是空的，请检查用户是否有权限，`make test-db`（如果你是 psql）
+
+```bash
+\c tiny_forum 
+-- 授予 public schema 下所有表的权限
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO tinyforum;
+
+-- 授予所有序列的权限
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO tinyforum;
+
+-- 设置默认权限，确保将来新建的表也自动授权
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO tinyforum;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO tinyforum;
+
 ```
 
 > **重要提示**
@@ -94,7 +110,7 @@ dbmock generate --schema schema.json --rows users=100 --rows posts=500
 
 ```bash
 export DATABASE_URL="postgresql://username:password@localhost/mydb"
-# export DATABASE_URL="postgresql://simons:tf-password@localhost/tiny_forum"
+# export DATABASE_URL="postgresql://tinyforum:tf#password@localhost/tiny_forum"
 dbmock extract -j schema.json
 ```
 

@@ -180,11 +180,9 @@ pub fn build_insert_batches(
         .map(|c| qi(&c.name, db_type))
         .collect::<Vec<_>>()
         .join(", ");
-
-    // 提取列名列表，用于唯一约束检查
     let col_names: Vec<String> = cols.iter().map(|c| c.name.clone()).collect();
 
-    // ── pre-compute per-column strategy (done once, not per row) ─────────────
+    // ── pre-compute per-column strategy ─────────────────────────────
     let strategies: Vec<ColStrategy> = cols
         .iter()
         .map(|col| resolve_strategy(col, table, fk_id_pools, self_ref_cols, table_config))
@@ -196,37 +194,30 @@ pub fn build_insert_batches(
     let mut batch: Vec<String> = Vec::with_capacity(insert_rows);
     let mut values_buf: Vec<String> = Vec::with_capacity(cols.len());
 
-    const MAX_RETRIES: usize = 100; // 最多重试100次
+    const MAX_RETRIES: usize = 100;
 
     for row_idx in 0..row_count {
         let mut retries = 0;
         let final_values = loop {
             values_buf.clear();
+            // 生成所有列的值
             for (strat, col) in strategies.iter().zip(cols.iter()) {
-                values_buf.push(apply_strategy(strat, col, db_type));
+                let val = apply_strategy(strat, col, db_type);
+                values_buf.push(val);
             }
 
-            // 唯一约束检查
             if let Some(tracker) = constraint_tracker {
-                if tracker.check_and_insert(&values_buf, &col_names) {
+                let ok = tracker.check_and_insert(&values_buf, &col_names);
+                if ok {
                     break values_buf.clone();
                 } else {
                     retries += 1;
                     if retries >= MAX_RETRIES {
-                        eprintln!(
-                            "⚠️  Could not generate unique row for {}.{} after {} retries",
-                            table.name,
-                            col_names.join(","),
-                            MAX_RETRIES
-                        );
-                        // 最后依然返回该行（依赖数据库约束报错）
                         break values_buf.clone();
                     }
-                    // 继续重试
                     continue;
                 }
             } else {
-                // 没有唯一约束，直接使用
                 break values_buf.clone();
             }
         };

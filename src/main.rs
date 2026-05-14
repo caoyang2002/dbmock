@@ -289,7 +289,8 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
         "并发执行数量: {}\n每个被引用的表在内存中缓存的主键值数量: {}\n单次发送行数: {}",
         tuning.concurrency, tuning.fk_pool_cap, tuning.insert_rows
     );
-    let engine = MockEngine::new(drv.clone(), tuning);
+    let mut engine = MockEngine::new(drv.clone(), tuning);
+    engine.set_debug(args.debug);
     let report = engine
         .generate(&schema_obj, &row_counts, false, mock_config.as_ref())
         .await?;

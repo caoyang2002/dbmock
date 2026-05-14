@@ -42,6 +42,57 @@ clear:
 	@rm -f env.mk
 	@rm -f mock_config.yml
 
+# 测试数据库连接及所有表的权限
+test-db:
+	@echo "Testing connection to database..."
+	@psql "$(DATABASE_URL)" -c "SELECT 1" > /dev/null 2>&1 && \
+		echo "✅ Database connection successful" || \
+		(echo "❌ Failed to connect to database" && exit 1)
+	@echo "Checking tables and permissions..."
+	@psql "$(DATABASE_URL)" -t -A -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';" > /tmp/tables_$$.txt 2>/dev/null; \
+	if [ ! -s /tmp/tables_$$.txt ]; then \
+		echo "⚠️  No tables found in public schema. Please run: psql '$(DATABASE_URL)' -f schema.sql"; \
+		rm -f /tmp/tables_$$.txt; \
+		exit 1; \
+	fi; \
+	FAILED=0; \
+	while read -r tbl; do \
+		if psql "$(DATABASE_URL)" -c "SELECT 1 FROM \"$$tbl\" LIMIT 1" > /dev/null 2>&1; then \
+			echo "  ✅ Read permission on table: $$tbl"; \
+		else \
+			echo "  ❌ No read permission on table: $$tbl (or table empty)"; \
+			FAILED=1; \
+		fi; \
+	done < /tmp/tables_$$.txt; \
+	rm -f /tmp/tables_$$.txt; \
+	if [ $$FAILED -ne 0 ]; then exit 1; fi
+	@echo "Checking sequence permissions..."
+	@psql "$(DATABASE_URL)" -t -A -c "SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'public';" > /tmp/seqs_$$.txt 2>/dev/null; \
+	if [ -s /tmp/seqs_$$.txt ]; then \
+		while read -r seq; do \
+			if psql "$(DATABASE_URL)" -c "SELECT nextval('\"$$seq\"')" > /dev/null 2>&1; then \
+				echo "  ✅ USAGE permission on sequence: $$seq"; \
+				psql "$(DATABASE_URL)" -c "SELECT setval('\"$$seq\"', last_value) FROM \"$$seq\"" > /dev/null 2>&1; \
+			else \
+				echo "  ❌ No USAGE permission on sequence: $$seq"; \
+				exit 1; \
+			fi; \
+		done < /tmp/seqs_$$.txt; \
+		rm -f /tmp/seqs_$$.txt; \
+	else \
+		echo "  No sequences found."; \
+	fi
+	@echo "All permission checks passed."
+
+init: test-db
+	@$(BIN) extract --database-url "$(DATABASE_URL)"
+	@$(BIN) config --force
+gen:
+	# @$(BIN) generate --database-url "$(DATABASE_URL)"
+
+
+
+
 help:
 	@echo "Available targets:"
 	@echo " extract: 提取数据库结构"

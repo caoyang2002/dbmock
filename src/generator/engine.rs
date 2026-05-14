@@ -52,6 +52,7 @@ pub struct MockEngine {
     insert_rows: usize,
     concurrency: usize,
     fk_pool_cap: usize,
+    debug: bool,
 }
 
 impl MockEngine {
@@ -61,7 +62,11 @@ impl MockEngine {
             insert_rows: tuning.insert_rows,
             concurrency: tuning.concurrency,
             fk_pool_cap: tuning.fk_pool_cap,
+            debug: false,
         }
+    }
+    pub fn set_debug(&mut self, enabled: bool) {
+        self.debug = enabled;
     }
 }
 
@@ -73,9 +78,19 @@ impl DataGenerator for MockEngine {
         &self,
         schema: &Schema,
         row_counts: &HashMap<String, usize>,
-        dry_run: bool,
+        preview: bool,
         mock_config: Option<&MockConfig>,
     ) -> Result<GenerationReport> {
+        if self.debug {
+            eprintln!("[DEBUG] generate() called");
+            eprintln!("[DEBUG] preview = {}", preview);
+            eprintln!("[DEBUG] row_counts = {:?}", row_counts);
+            eprintln!(
+                "[DEBUG] concurrency = {}, insert_rows = {}, fk_pool_cap = {}",
+                self.concurrency, self.insert_rows, self.fk_pool_cap
+            );
+        }
+
         reset_unique_counters();
 
         let requested: Vec<String> = row_counts.keys().cloned().collect();
@@ -91,19 +106,44 @@ impl DataGenerator for MockEngine {
         let mut fk_pools: HashMap<String, Vec<String>> = HashMap::new();
 
         // ── pre-load FK pools for tables not being inserted ───────────────────
-        if !dry_run {
-            for ref_table in collect_referenced_tables(schema, &requested) {
+        if !preview {
+            let referenced = collect_referenced_tables(schema, &requested);
+            if self.debug {
+                eprintln!(
+                    "[DEBUG] Referenced tables (not being inserted): {:?}",
+                    referenced
+                );
+            }
+            for ref_table in referenced {
                 if requested.contains(&ref_table) {
                     continue;
                 }
                 let pk_col = pk_col_name(schema, &ref_table);
-                if let Ok(ids) = self
+                if self.debug {
+                    eprintln!(
+                        "[DEBUG] Pre-loading FK pool for '{}' (pk_col={})",
+                        ref_table, pk_col
+                    );
+                }
+                match self
                     .driver
                     .query_ids(&ref_table, &pk_col, self.fk_pool_cap)
                     .await
                 {
-                    if !ids.is_empty() {
-                        fk_pools.insert(ref_table, ids);
+                    Ok(ids) => {
+                        if self.debug {
+                            eprintln!("[DEBUG]   Loaded {} ids from '{}'", ids.len(), ref_table);
+                        }
+                        if !ids.is_empty() {
+                            fk_pools.insert(ref_table, ids);
+                        } else if self.debug {
+                            eprintln!("[DEBUG]   Table '{}' is empty (0 rows)", ref_table);
+                        }
+                    }
+                    Err(e) => {
+                        if self.debug {
+                            eprintln!("[DEBUG]   Failed to query ids from '{}': {}", ref_table, e);
+                        }
                     }
                 }
             }
@@ -138,6 +178,9 @@ impl DataGenerator for MockEngine {
             };
             let row_count = *row_counts.get(table_name).unwrap_or(&0);
             if row_count == 0 {
+                if self.debug {
+                    eprintln!("[DEBUG] Skipping table '{}' (0 rows)", table_name);
+                }
                 continue;
             }
             let self_ref_cols: Vec<String> = ts
@@ -150,12 +193,28 @@ impl DataGenerator for MockEngine {
             let table_cfg = mock_config.and_then(|mc| mc.get(table_name));
             let pk_col = pk_col_name(schema, table_name);
 
+            if self.debug {
+                eprintln!(
+                    "[DEBUG] Processing table: '{}', rows={}",
+                    table_name, row_count
+                );
+                eprintln!("[DEBUG]   self_ref_cols = {:?}", self_ref_cols);
+                eprintln!("[DEBUG]   foreign_keys = {:?}", ts.foreign_keys);
+                eprintln!("[DEBUG]   unique_constraints = {:?}", ts.unique_constraints);
+                eprintln!(
+                    "[DEBUG]   fk_pools currently contain keys: {:?}",
+                    fk_pools.keys().collect::<Vec<_>>()
+                );
+            }
+
             let bar = mp.add(ProgressBar::new(row_count as u64));
             bar.set_style(bar_style.clone());
             bar.set_message(table_name.clone());
 
-            if dry_run {
-                // Dry-run: generate + print, no concurrency needed
+            if preview {
+                if self.debug {
+                    eprintln!("[DEBUG] Preview mode for '{}'", table_name);
+                }
                 let stmts = build_insert_batches(
                     ts,
                     row_count,
@@ -204,40 +263,44 @@ impl DataGenerator for MockEngine {
             }
 
             // ── real insert: concurrent chunks ────────────────────────────────
-            // Build ALL statements up-front in a blocking thread so value
-            // generation (rand, string alloc) does not block the async executor.
-            let stmts = {
-                let ts2 = ts.clone();
-                let db_type2 = db_type.clone();
-                let fk_pools2 = fk_pools.clone();
-                let src2 = self_ref_cols.clone();
-                let tc2 = table_cfg.cloned();
-                let insert_rows = self.insert_rows;
-                let tracker = constraint_tracker;
-                tokio::task::spawn_blocking(move || {
-                    build_insert_batches(
-                        &ts2,
-                        row_count,
-                        &db_type2,
-                        &fk_pools2,
-                        &src2,
-                        tc2.as_ref(),
-                        insert_rows,
-                        tracker.as_ref(),
-                    )
-                })
-                .await
-                .map_err(|e| MockerError::Generator {
-                    message: format!("value generation panicked: {}", e),
-                })?
-            };
-
+            if self.debug {
+                eprintln!("[DEBUG] Real insert mode for '{}'", table_name);
+                eprintln!("[DEBUG]   Starting build_insert_batches (direct call)...");
+            }
+            let stmts = build_insert_batches(
+                ts,
+                row_count,
+                &db_type,
+                &fk_pools,
+                &self_ref_cols,
+                table_cfg,
+                self.insert_rows,
+                constraint_tracker.as_ref(),
+            );
+            if self.debug {
+                eprintln!(
+                    "[DEBUG] build_insert_batches returned {} statements",
+                    stmts.len()
+                );
+            }
             let n_stmts = stmts.len();
             let rows_total = row_count as u64;
+            if self.debug {
+                eprintln!(
+                    "[DEBUG]   build_insert_batches returned {} statements",
+                    n_stmts
+                );
+            }
 
             // We collect IDs only from the first FK_POOL_CAP rows so we can
             // seed downstream tables — after that we discard RETURNING results.
             let need_ids = !fk_pools.contains_key(table_name);
+            if self.debug {
+                eprintln!("[DEBUG]   need_ids for '{}' = {}", table_name, need_ids);
+                if need_ids && !self_ref_cols.is_empty() {
+                    eprintln!("[DEBUG]   Table has self-ref columns but no existing pool; will attempt to collect IDs from RETURNING");
+                }
+            }
             let mut collected_ids: Vec<String> =
                 Vec::with_capacity(self.fk_pool_cap.min(row_count));
             let mut inserted: u64 = 0;
@@ -258,10 +321,15 @@ impl DataGenerator for MockEngine {
                     .count()
                     .saturating_sub(1) // leading INSERT (...) also has a (
                     .max(1) as u64;
-                // More accurate: count VALUE tuples.
                 // We'll just use INSERT_ROWS as the expected count per batch.
                 let expected_rows = self.insert_rows as u64;
 
+                if self.debug && i == 0 {
+                    eprintln!(
+                        "[DEBUG]   Spawning first task (sql preview: {} chars)",
+                        sql.len()
+                    );
+                }
                 handles.push(tokio::spawn(async move {
                     let result = if want_ids {
                         driver
@@ -274,6 +342,13 @@ impl DataGenerator for MockEngine {
                     drop(permit);
                     result
                 }));
+            }
+
+            if self.debug {
+                eprintln!(
+                    "[DEBUG]   Spawned {} tasks, waiting for results...",
+                    handles.len()
+                );
             }
 
             // Collect results as tasks complete
@@ -301,12 +376,26 @@ impl DataGenerator for MockEngine {
                 }
             }
 
+            if self.debug {
+                eprintln!(
+                    "[DEBUG]   Finished tasks for '{}', inserted {} rows, collected {} ids",
+                    table_name,
+                    inserted,
+                    collected_ids.len()
+                );
+            }
+
             report.total_rows_inserted += inserted;
             report.errors.extend(errors);
             report.tables_processed += 1;
 
             // Seed FK pool for downstream tables
             if collected_ids.is_empty() && need_ids {
+                if self.debug {
+                    eprintln!(
+                        "[DEBUG]   No IDs collected via RETURNING; trying query_ids fallback..."
+                    );
+                }
                 // RETURNING wasn't used (no downstream FK) or nothing landed
                 // Try a lightweight re-query for a sample
                 if let Ok(ids) = self
@@ -314,18 +403,40 @@ impl DataGenerator for MockEngine {
                     .query_ids(table_name, &pk_col, self.fk_pool_cap)
                     .await
                 {
+                    if self.debug {
+                        eprintln!("[DEBUG]   query_ids returned {} ids", ids.len());
+                    }
                     fk_pools.insert(table_name.clone(), ids);
                 } else {
+                    if self.debug {
+                        eprintln!(
+                            "[DEBUG]   query_ids failed; using synthetic_pool (size={})",
+                            inserted
+                        );
+                    }
                     fk_pools.insert(
                         table_name.clone(),
                         synthetic_pool(inserted as usize, self.fk_pool_cap),
                     );
                 }
             } else if !collected_ids.is_empty() {
+                if self.debug {
+                    eprintln!(
+                        "[DEBUG]   Inserting {} collected ids into fk_pools for '{}'",
+                        collected_ids.len(),
+                        table_name
+                    );
+                }
                 fk_pools.insert(table_name.clone(), collected_ids);
             } else {
                 // Already had a pool or no IDs needed
                 if !fk_pools.contains_key(table_name) {
+                    if self.debug {
+                        eprintln!(
+                            "[DEBUG]   No pool yet; using synthetic_pool (size={})",
+                            inserted
+                        );
+                    }
                     fk_pools.insert(
                         table_name.clone(),
                         synthetic_pool(inserted as usize, self.fk_pool_cap),
@@ -337,10 +448,12 @@ impl DataGenerator for MockEngine {
         }
 
         overall.finish_with_message(format!("total ✓ {} rows", report.total_rows_inserted));
+        if self.debug {
+            eprintln!("[DEBUG] Generation completed successfully.");
+        }
         Ok(report)
     }
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn collect_referenced_tables(schema: &Schema, requested: &[String]) -> Vec<String> {

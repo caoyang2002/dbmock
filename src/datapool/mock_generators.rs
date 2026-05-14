@@ -1,57 +1,110 @@
 //! 数据生成器实现（唯一值 + 随机值）
 //!
-//! 唯一生成器内部使用 `UniqueGenerator` + `fake` 保证不重复。
+//! 唯一生成器内部使用 `HashSet` + 随机字符串保证不重复，碰撞时使用 UUID 回退。
 //! 随机生成器直接返回随机值（允许重复）。
 
 use fake::faker::address::zh_cn::{CityName, CountryName, StateName, StreetName};
 use fake::faker::company::zh_cn::CompanyName;
 use fake::faker::creditcard::zh_cn::CreditCardNumber;
-use fake::faker::internet::zh_cn::SafeEmail;
+use fake::faker::internet::en::SafeEmail;
 use fake::faker::job::zh_cn::{Seniority, Title};
 use fake::faker::name::zh_cn::Name;
 use fake::faker::phone_number::zh_cn::PhoneNumber;
 use fake::{Fake, Faker};
 use once_cell::sync::Lazy;
-use rand::random;
-use rand::Rng;
+use rand::{random, Rng};
+use std::collections::HashSet;
 use std::sync::Mutex;
 use uuid::Uuid;
 
 use super::unique::UniqueGenerator;
 
 // -----------------------------------------------------------------------------
-// 全局唯一生成器实例（每个字段独立）
+// 全局唯一生成器（仅手机号保留原有方式，用户名/邮箱已优化为无重试）
 // -----------------------------------------------------------------------------
 
-static UNIQUE_USERNAME_GEN: Lazy<Mutex<UniqueGenerator<String>>> =
-    Lazy::new(|| Mutex::new(UniqueGenerator::new()));
 static UNIQUE_PHONE_GEN: Lazy<Mutex<UniqueGenerator<String>>> =
     Lazy::new(|| Mutex::new(UniqueGenerator::new()));
-static UNIQUE_EMAIL_GEN: Lazy<Mutex<UniqueGenerator<String>>> =
-    Lazy::new(|| Mutex::new(UniqueGenerator::new()));
+
+// 全局存储已使用的用户名和邮箱（延迟初始化，无编译错误）
+static USED_USERNAMES: Lazy<Mutex<HashSet<String>>> = Lazy::new(|| Mutex::new(HashSet::new()));
+static USED_EMAILS: Lazy<Mutex<HashSet<String>>> = Lazy::new(|| Mutex::new(HashSet::new()));
+
+// -----------------------------------------------------------------------------
+// 辅助函数
+// -----------------------------------------------------------------------------
+
+/// 生成随机字符串（字母数字）
+fn random_string(len: usize) -> String {
+    let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyz0123456789".chars().collect();
+    let mut rng = rand::thread_rng();
+    (0..len)
+        .map(|_| {
+            let idx = rng.gen_range(0..chars.len());
+            chars[idx]
+        })
+        .collect()
+}
+
+/// 生成随机 Base64URL 字符串（模拟 bcrypt salt/hash）
+fn random_base64url(len: usize) -> String {
+    const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let mut rng = rand::thread_rng();
+    (0..len)
+        .map(|_| {
+            let idx = rng.gen_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect()
+}
 
 // -----------------------------------------------------------------------------
 // 公开的唯一生成器（对外保证不重复）
 // -----------------------------------------------------------------------------
 
-/// 生成唯一的用户名
+/// 生成唯一的用户名（6位随机字符，碰撞后使用 UUID）
 pub fn unique_username() -> String {
-    let mut gen = UNIQUE_USERNAME_GEN.lock().unwrap();
-    gen.generate(|| Name().fake())
+    let mut used = USED_USERNAMES.lock().unwrap();
+    let candidate = random_string(6);
+    if used.insert(candidate.clone()) {
+        return candidate;
+    }
+    // 碰撞：使用 UUID（取前6位）
+    let uuid_str = Uuid::new_v4().simple().to_string();
+    let fallback = format!("u{}", &uuid_str[..6]);
+    used.insert(fallback.clone());
+    fallback
 }
 
-/// 生成唯一的手机号
+/// 生成唯一的邮箱（12位随机字符 + @example.com，碰撞后使用 UUID）
+pub fn unique_email() -> String {
+    let mut used = USED_EMAILS.lock().unwrap();
+    let local = random_string(12);
+    let candidate = format!("{}@example.com", local);
+    if used.insert(candidate.clone()) {
+        return candidate;
+    }
+    // 碰撞：使用 UUID 构造邮箱
+    let uuid_str = Uuid::new_v4().simple().to_string();
+    let fallback_local = format!("u{}", &uuid_str[..10]);
+    let fallback = format!("{}@example.com", fallback_local);
+    used.insert(fallback.clone());
+    fallback
+}
+
+/// 生成唯一的手机号（保留原有 UniqueGenerator，可后续优化）
 pub fn unique_phone_number() -> String {
     let mut gen = UNIQUE_PHONE_GEN.lock().unwrap();
     gen.generate(|| PhoneNumber().fake())
 }
 
-/// 生成唯一的邮箱
-pub fn unique_email() -> String {
-    let mut gen = UNIQUE_EMAIL_GEN.lock().unwrap();
-    gen.generate(|| SafeEmail().fake())
+/// 随机生成 bcrypt 密码哈希（模拟格式）
+pub fn random_password_hash() -> String {
+    let rounds: u8 = rand::thread_rng().gen_range(10..=13);
+    let salt = random_base64url(22);
+    let hash = random_base64url(31);
+    format!("$2b${:02}${}{}", rounds, salt, hash)
 }
-
 // -----------------------------------------------------------------------------
 // 公开的随机生成器（可能重复，但速度更快）
 // -----------------------------------------------------------------------------
@@ -172,22 +225,14 @@ pub fn random_ip() -> String {
     )
 }
 
-/// 随机生成 bcrypt 密码哈希（模拟格式）
-pub fn random_password_hash() -> String {
-    let rounds: u8 = rand::thread_rng().gen_range(10..=13);
-    let salt = random_base64url(22);
-    let hash = random_base64url(31);
-    format!("$2b${:02}${}{}", rounds, salt, hash)
-}
-
 /// 生成随机 base64url 字符串（辅助函数）
-fn random_base64url(len: usize) -> String {
-    const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-    let mut rng = rand::thread_rng();
-    (0..len)
-        .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
-        .collect()
-}
+// fn random_base64url(len: usize) -> String {
+//     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+//     let mut rng = rand::thread_rng();
+//     (0..len)
+//         .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
+//         .collect()
+// }
 
 // 在 mock_generators.rs 中添加以下函数
 
