@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-/// 数据库
 /// Represents a complete database schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Schema {
@@ -26,9 +25,9 @@ pub struct ColumnSchema {
     pub is_nullable: bool,
     pub is_primary_key: bool,
     pub is_auto_increment: bool,
-    pub max_length: Option<i64>,
-    pub numeric_precision: Option<i64>,
-    pub numeric_scale: Option<i64>,
+    pub max_length: Option<i32>,
+    pub numeric_precision: Option<i32>,
+    pub numeric_scale: Option<i32>,
     pub default_value: Option<String>,
     pub is_unique: bool,
 }

@@ -14,7 +14,6 @@ pub trait DataGenerator: Send + Sync {
         row_counts: &HashMap<String, usize>,
         dry_run: bool,
         mock_config: Option<&MockConfig>,
-
     ) -> Result<GenerationReport>;
 }
 

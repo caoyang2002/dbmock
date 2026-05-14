@@ -24,9 +24,9 @@ impl DatabaseDriver for PostgresDriver {
         let mut table_schemas = Vec::new();
 
         for table_name in tables {
-            let columns          = self.fetch_columns(&table_name).await?;
-            let primary_keys     = self.fetch_primary_keys(&table_name).await?;
-            let foreign_keys     = self.fetch_foreign_keys(&table_name).await?;
+            let columns = self.fetch_columns(&table_name).await?;
+            let primary_keys = self.fetch_primary_keys(&table_name).await?;
+            let foreign_keys = self.fetch_foreign_keys(&table_name).await?;
             let unique_constraints = self.fetch_unique_constraints(&table_name).await?;
 
             let columns = columns
@@ -78,15 +78,13 @@ impl DatabaseDriver for PostgresDriver {
         _table: &str,
         pk_col: &str,
     ) -> Result<Vec<String>> {
-        let mut tx  = self.pool.begin().await?;
+        let mut tx = self.pool.begin().await?;
         let mut ids: Vec<String> = Vec::new();
 
         for sql in statements {
             // Append RETURNING <pk_col> to each INSERT.
             let returning_sql = format!("{} RETURNING \"{}\"", sql, pk_col);
-            let rows = sqlx::query(&returning_sql)
-                .fetch_all(&mut *tx)
-                .await?;
+            let rows = sqlx::query(&returning_sql).fetch_all(&mut *tx).await?;
 
             for row in rows {
                 // Try integer first (SERIAL / BIGSERIAL), else string.
@@ -108,12 +106,7 @@ impl DatabaseDriver for PostgresDriver {
 
     // ── query existing IDs ───────────────────────────────────────────────────
 
-    async fn query_ids(
-        &self,
-        table: &str,
-        column: &str,
-        limit: usize,
-    ) -> Result<Vec<String>> {
+    async fn query_ids(&self, table: &str, column: &str, limit: usize) -> Result<Vec<String>> {
         let sql = format!(
             "SELECT \"{}\" FROM \"{}\" WHERE \"{}\" IS NOT NULL ORDER BY \"{}\" LIMIT {}",
             column, table, column, column, limit
@@ -138,7 +131,9 @@ impl DatabaseDriver for PostgresDriver {
         Ok(ids)
     }
 
-    fn db_type(&self) -> &str { "postgres" }
+    fn db_type(&self) -> &str {
+        "postgres"
+    }
 
     async fn ping(&self) -> Result<()> {
         sqlx::query("SELECT 1").execute(&self.pool).await?;
@@ -161,7 +156,10 @@ impl PostgresDriver {
         )
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows.iter().map(|r| r.get::<String, _>("table_name")).collect())
+        Ok(rows
+            .iter()
+            .map(|r| r.get::<String, _>("table_name"))
+            .collect())
     }
 
     async fn fetch_columns(&self, table: &str) -> Result<Vec<ColumnSchema>> {
@@ -183,18 +181,21 @@ impl PostgresDriver {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().map(|r| ColumnSchema {
-            name:              r.get("column_name"),
-            data_type:         r.get("data_type"),
-            is_nullable:       r.get::<String, _>("is_nullable") == "YES",
-            is_primary_key:    false,
-            is_auto_increment: r.get("is_auto_increment"),
-            max_length:        r.get("character_maximum_length"),
-            numeric_precision: r.get::<Option<i64>, _>("numeric_precision"),
-            numeric_scale:     r.get::<Option<i64>, _>("numeric_scale"),
-            default_value:     r.get("column_default"),
-            is_unique:         false,
-        }).collect())
+        Ok(rows
+            .iter()
+            .map(|r| ColumnSchema {
+                name: r.get("column_name"),
+                data_type: r.get("data_type"),
+                is_nullable: r.get::<String, _>("is_nullable") == "YES",
+                is_primary_key: false,
+                is_auto_increment: r.get("is_auto_increment"),
+                max_length: r.get::<Option<i32>, _>("character_maximum_length"),
+                numeric_precision: r.get::<Option<i32>, _>("numeric_precision"),
+                numeric_scale: r.get::<Option<i32>, _>("numeric_scale"),
+                default_value: r.get("column_default"),
+                is_unique: false,
+            })
+            .collect())
     }
 
     async fn fetch_primary_keys(&self, table: &str) -> Result<Vec<String>> {
@@ -212,7 +213,10 @@ impl PostgresDriver {
         .bind(table)
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows.iter().map(|r| r.get::<String, _>("column_name")).collect())
+        Ok(rows
+            .iter()
+            .map(|r| r.get::<String, _>("column_name"))
+            .collect())
     }
 
     async fn fetch_foreign_keys(&self, table: &str) -> Result<Vec<ForeignKey>> {
@@ -237,12 +241,15 @@ impl PostgresDriver {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.iter().map(|r| ForeignKey {
-            column:            r.get("column_name"),
-            referenced_table:  r.get("referenced_table"),
-            referenced_column: r.get("referenced_column"),
-            constraint_name:   r.get("constraint_name"),
-        }).collect())
+        Ok(rows
+            .iter()
+            .map(|r| ForeignKey {
+                column: r.get("column_name"),
+                referenced_table: r.get("referenced_table"),
+                referenced_column: r.get("referenced_column"),
+                constraint_name: r.get("constraint_name"),
+            })
+            .collect())
     }
 
     async fn fetch_unique_constraints(&self, table: &str) -> Result<Vec<Vec<String>>> {
@@ -261,7 +268,8 @@ impl PostgresDriver {
         .fetch_all(&self.pool)
         .await?;
 
-        let mut map: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+        let mut map: std::collections::HashMap<String, Vec<String>> =
+            std::collections::HashMap::new();
         for row in &rows {
             let c: String = row.get("constraint_name");
             let k: String = row.get("column_name");

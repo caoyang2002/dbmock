@@ -5,3 +5,5 @@ schema.sql
 .DS_Store
 mock_config.yml
 env.mk
+datamocker
+config.yml

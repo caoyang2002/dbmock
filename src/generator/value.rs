@@ -11,16 +11,20 @@
 use chrono::{Duration, Utc};
 use rand::Rng;
 use uuid::Uuid;
-use crate::core::GenContext;
 
-use crate::core::schema::ColumnSchema;
+use crate::{
+    core::schema::ColumnSchema,
+    datapool::{
+        random_image_url, unique_email, unique_phone_number, unique_username,
+        user::random_avatar_url,
+    },
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public API
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Return a SQL literal (or NULL) for `col`.
-/// 返回一个 SQL 值（或 NULL），对于 col。
 pub fn generate_value(col: &ColumnSchema, _db_type: &str) -> String {
     // Nullable: ~15 % NULL
     if col.is_nullable && rand::thread_rng().gen_bool(0.15) {
@@ -38,7 +42,6 @@ pub fn generate_value(col: &ColumnSchema, _db_type: &str) -> String {
 
 /// Generate a representative PK value matching the column's storage type.
 /// Used by the engine to pre-populate FK pools.
-/// 生成一个代表主键值的 SQL 值（或 NULL），对于 col。
 pub fn generate_pk_value(col: &ColumnSchema) -> String {
     match TypeKind::from_data_type(&col.data_type) {
         TypeKind::Uuid => sql_str(Uuid::new_v4().to_string()),
@@ -50,7 +53,7 @@ pub fn generate_pk_value(col: &ColumnSchema) -> String {
 // ─────────────────────────────────────────────────────────────────────────────
 // TypeKind — complete classification of every PostgreSQL / MySQL / SQLite type
 // ─────────────────────────────────────────────────────────────────────────────
-/// 枚举，用于表示 PostgreSQL / MySQL / SQLite 的所有类型
+
 #[derive(Debug, Clone)]
 enum TypeKind {
     /// INTEGER family: SERIAL, BIGINT, SMALLINT, INT, MEDIUMINT, TINYINT, …
@@ -94,9 +97,6 @@ impl TypeKind {
     /// We normalise to lowercase and match on substrings so that both short
     /// aliases ("int", "varchar") and full PG names ("character varying",
     /// "timestamp with time zone") are handled.
-    /// 从数据库驱动返回的 `data_type` 字符串 exact_type，将其转换为 TypeKind。
-    /// 将原始字符串转换为小写并匹配子字符串，
-    /// 因此，短别名（如“int”、“varchar”）和PG名称（如“character varying”、“timestamp with time zone”）都可以处理。
     fn from_data_type(raw: &str) -> Self {
         let dt = raw.trim().to_lowercase();
         let dt = dt.as_str();
@@ -156,10 +156,10 @@ impl TypeKind {
         // drivers still report them as a type.  We map them to their int size
         // so FK pools get the right scale.
         let int_max = match dt {
-            "tinyint" | "int1"                             => Some(127_i64),
-            "smallint" | "int2" | "smallserial"            => Some(32_767),
-            "mediumint" | "int3"                           => Some(8_388_607),
-            "int" | "int4" | "integer" | "serial"          => Some(2_147_483_647),
+            "tinyint" | "int1" => Some(127_i64),
+            "smallint" | "int2" | "smallserial" => Some(32_767),
+            "mediumint" | "int3" => Some(8_388_607),
+            "int" | "int4" | "integer" | "serial" => Some(2_147_483_647),
             "bigint" | "int8" | "bigserial" | "unsigned bigint" => Some(9_007_199_254_740_991),
             _ => None,
         };
@@ -210,11 +210,7 @@ impl TypeKind {
         }
 
         // ── binary ───────────────────────────────────────────────────────────
-        if dt == "bytea"
-            || dt.contains("blob")
-            || dt.contains("binary")
-            || dt.contains("bytes")
-        {
+        if dt == "bytea" || dt.contains("blob") || dt.contains("binary") || dt.contains("bytes") {
             return TypeKind::Binary;
         }
 
@@ -228,20 +224,33 @@ impl TypeKind {
 
     /// Generate a SQL literal for this type, optionally refined by the column
     /// name as a semantic hint.
-    /// 生成一个SQL字面量，可选地通过列名称作为语义提示。
     fn generate(self, col: &ColumnSchema) -> String {
-        let ctx = GenContext::new();
         match self {
             // ── integers ──────────────────────────────────────────────────────
             TypeKind::Integer { max } => {
                 // Semantic refinement: counts should be small non-negative
                 let n = col.name.to_lowercase();
-                let upper = if ends_with_any(&n, &[
-                    "_count", "_num", "_number", "_qty", "_quantity",
-                    "_total", "_rank", "_score", "_index", "_size",
-                    "_priority", "_order", "_seq",
-                ]) || matches!(n.as_str(), "count" | "quantity" | "total" | "score" | "rank" | "age")
-                {
+                let upper = if ends_with_any(
+                    &n,
+                    &[
+                        "_count",
+                        "_num",
+                        "_number",
+                        "_qty",
+                        "_quantity",
+                        "_total",
+                        "_rank",
+                        "_score",
+                        "_index",
+                        "_size",
+                        "_priority",
+                        "_order",
+                        "_seq",
+                    ],
+                ) || matches!(
+                    n.as_str(),
+                    "count" | "quantity" | "total" | "score" | "rank" | "age"
+                ) {
                     1_000_i64
                 } else {
                     max.min(1_000_000)
@@ -258,7 +267,7 @@ impl TypeKind {
             // ── decimal ───────────────────────────────────────────────────────
             TypeKind::Decimal { .. } => {
                 let scale = col.numeric_scale.unwrap_or(2).max(0) as usize;
-                let prec  = col.numeric_precision.unwrap_or(10).max(scale as i64 + 1) as usize;
+                let prec = col.numeric_precision.unwrap_or(10).max(scale as i32 + 1) as usize;
                 let int_digits = prec.saturating_sub(scale).min(8);
                 let max_int = 10_u64.pow(int_digits as u32).saturating_sub(1).min(999_999);
                 let int_part: u64 = rand::thread_rng().gen_range(0..=max_int);
@@ -305,7 +314,7 @@ impl TypeKind {
             // ── text family ───────────────────────────────────────────────────
             TypeKind::Text { .. } => {
                 let max = col.max_length.unwrap_or(64).max(1).min(512) as usize;
-                gen_text_for_col(&ctx, col, max)
+                gen_text_for_col(col, max)
             }
 
             // ── binary → NULL (can't guess bytes) ────────────────────────────
@@ -326,131 +335,180 @@ impl TypeKind {
 // but only within the text type class — never cross-type.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// 生成文本值
-fn gen_text_for_col(ctx: &GenContext, col: &ColumnSchema, max_len: usize) -> String {
+fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
     let n = col.name.to_lowercase();
 
-    // 定义生成原始值的闭包（不进行 SQL 转义）
-    let generate_raw = || -> String {
-        // ── email ────────────────────────────────────────────────────────────
-        if contains_any(&n, &["email", "e_mail"]) {
-            let unique_email = crate::datapool::unique_email();  // 调用唯一生成器
-            return sql_str(unique_email);
-            // let user = gen_alphanum(rand::thread_rng().gen_range(4..=10));
-            // let tag: u32 = rand::thread_rng().gen_range(10..=999);
-            // let domain = gen_alphanum(rand::thread_rng().gen_range(4..=9));
-            // return format!("{}.{}@{}.{}", user, tag, domain, pick_tld());
-        }
+    // ── email ────────────────────────────────────────────────────────────────
+    if contains_any(&n, &["email", "e_mail"]) {
+        return sql_str(unique_email());
+        // let user = gen_alphanum(rand::thread_rng().gen_range(4..=10));
+        // let tag: u32 = rand::thread_rng().gen_range(10..=999);
+        // let domain = gen_alphanum(rand::thread_rng().gen_range(4..=9));
+        // return sql_str(format!("{}.{}@{}.{}", user, tag, domain, pick_tld()));
+    }
+    if contains_any(&n, &["avatar"]) {
+        return sql_str(random_avatar_url());
+    }
+    if contains_any(&n, &["image", "cover"]) {
+        return sql_str(random_image_url());
+    }
 
-        // ── url / website ────────────────────────────────────────────────────
-        if contains_any(&n, &["url", "uri", "website", "homepage", "href"]) {
-            let host = gen_alphanum(rand::thread_rng().gen_range(5..=12));
-            let path = gen_alphanum(rand::thread_rng().gen_range(3..=8));
-            return format!("https://www.{}.{}/{}", host, pick_tld(), path);
-        }
+    // ── url / website ────────────────────────────────────────────────────────
+    if contains_any(&n, &["url", "uri", "website", "homepage", "href"]) {
+        let host = gen_alphanum(rand::thread_rng().gen_range(5..=12));
+        let path = gen_alphanum(rand::thread_rng().gen_range(3..=8));
+        return sql_str(format!("https://www.{}.{}/{}", host, pick_tld(), path));
+    }
 
-        // ── uuid stored as text ─────────────────────────────────────────────
-        if contains_any(&n, &["uuid", "guid"]) {
-            return Uuid::new_v4().to_string();
-        }
+    // ── uuid stored as text ──────────────────────────────────────────────────
+    if contains_any(&n, &["uuid", "guid"]) {
+        return sql_str(Uuid::new_v4().to_string());
+    }
 
-        // ── phone ───────────────────────────────────────────────────────────
-        if contains_any(&n, &["phone", "mobile", "cell", "fax"]) {
-            let mut rng = rand::thread_rng();
-            let cc: u16 = rng.gen_range(1..=99);
-            let sub: u64 = rng.gen_range(100_000_000..=9_999_999_999);
-            return format!("+{}{}", cc, sub);
-        }
+    // ── phone ────────────────────────────────────────────────────────────────
+    if contains_any(&n, &["phone", "mobile", "cell", "fax"]) {
+        return sql_str(unique_phone_number());
+        // let mut rng = rand::thread_rng();
+        // let cc: u16 = rng.gen_range(1..=99);
+        // let sub: u64 = rng.gen_range(100_000_000..=9_999_999_999);
+        // return sql_str(format!("+{}{}", cc, sub));
+    }
 
-        // ── hashed credential ───────────────────────────────────────────────
-        if contains_any(&n, &["password", "passwd", "pwd"]) {
-            let rounds: u8 = rand::thread_rng().gen_range(10..=13);
-            let salt = gen_base64url(22);
-            let hash = gen_base64url(31);
-            return format!("$2b${:02}${}{}", rounds, salt, hash);
-        }
+    // ── hashed credential  (password / secret / hash — NOT token/jti which are random strings) ──
+    if contains_any(&n, &["password", "passwd", "pwd"]) {
+        let rounds: u8 = rand::thread_rng().gen_range(10..=13);
+        let salt = gen_base64url(22);
+        let hash = gen_base64url(31);
+        return sql_str(format!("$2b${:02}${}{}", rounds, salt, hash));
+    }
 
-        // ── IP address ──────────────────────────────────────────────────────
-        if n == "ip" || n.ends_with("_ip") || n.contains("_ip_") || n == "upload_ip" || n == "operator_ip" || n == "reporter_ip" {
-            let mut rng = rand::thread_rng();
-            return format!(
-                "{}.{}.{}.{}",
-                rng.gen_range(1_u8..=254),
-                rng.gen_range(0_u8..=255),
-                rng.gen_range(0_u8..=255),
-                rng.gen_range(1_u8..=254),
-            );
-        }
+    // ── IP address ───────────────────────────────────────────────────────────
+    if n == "ip"
+        || n.ends_with("_ip")
+        || n.contains("_ip_")
+        || n == "upload_ip"
+        || n == "operator_ip"
+        || n == "reporter_ip"
+    {
+        let mut rng = rand::thread_rng();
+        return sql_str(format!(
+            "{}.{}.{}.{}",
+            rng.gen_range(1_u8..=254),
+            rng.gen_range(0_u8..=255),
+            rng.gen_range(0_u8..=255),
+            rng.gen_range(1_u8..=254),
+        ));
+    }
 
-        // ── slug / code / identifier ────────────────────────────────────────
-        if contains_any(&n, &["slug", "code"]) {
-            let len = rand::thread_rng().gen_range(4..=12).min(max_len);
-            return gen_slug(len);
-        }
+    // ── slug / code / identifier ─────────────────────────────────────────────
+    if contains_any(&n, &["slug", "code"]) {
+        let len = rand::thread_rng().gen_range(4..=12).min(max_len);
+        return sql_str(gen_slug(len));
+    }
 
-        // ── version string ──────────────────────────────────────────────────
-        if n == "version" || n.ends_with("_version") {
-            let mut rng = rand::thread_rng();
-            return format!("{}.{}.{}", rng.gen_range(0..=5), rng.gen_range(0..=20), rng.gen_range(0..=99));
-        }
+    // ── version string ───────────────────────────────────────────────────────
+    if n == "version" || n.ends_with("_version") {
+        let mut rng = rand::thread_rng();
+        return sql_str(format!(
+            "{}.{}.{}",
+            rng.gen_range(0..=5),
+            rng.gen_range(0..=20),
+            rng.gen_range(0..=99)
+        ));
+    }
 
-        // ── color / colour ──────────────────────────────────────────────────
-        if n == "color" || n == "colour" || n.ends_with("_color") || n.ends_with("_colour") {
-            let mut rng = rand::thread_rng();
-            return format!("#{:06X}", rng.gen_range(0_u32..=0xFF_FF_FF));
-        }
+    // ── color / colour ───────────────────────────────────────────────────────
+    if n == "color" || n == "colour" || n.ends_with("_color") || n.ends_with("_colour") {
+        let mut rng = rand::thread_rng();
+        return sql_str(format!("#{:06X}", rng.gen_range(0_u32..=0xFF_FF_FF)));
+    }
 
-        // ── user-agent string ───────────────────────────────────────────────
-        if contains_any(&n, &["user_agent", "useragent", "agent"]) {
-            return format!("Mozilla/5.0 (compatible; datamocker/{})", gen_alphanum(4));
-        }
+    // ── user-agent string ────────────────────────────────────────────────────
+    if contains_any(&n, &["user_agent", "useragent", "agent"]) {
+        return sql_str(format!(
+            "Mozilla/5.0 (compatible; datamocker/{})",
+            gen_alphanum(4)
+        ));
+    }
 
-        // ── long prose ──────────────────────────────────────────────────────
-        if contains_any(&n, &[
-            "description", "content", "body", "bio", "biography",
-            "summary", "detail", "note", "remark", "message", "about",
-            "before", "after",
-        ]) {
-            let word_count = rand::thread_rng().gen_range(8..=25_usize);
-            let words: Vec<String> = (0..word_count)
-                .map(|_| gen_word(rand::thread_rng().gen_range(3..=9)))
-                .collect();
-            let s = words.join(" ");
-            if s.len() > max_len { return s[..max_len].to_string() } else { return s };
-        }
+    if contains_any(&n, &["name", "username", "login"]) {
+        return sql_str(unique_username());
+    }
 
-        // ── short label: title / subject / name / username / ... ────────────
-        if contains_any(&n, &[
-            "title", "subject", "headline", "caption", "label",
-           "tag", "category", "role",
-            "reason", "action", "type", "status", "state",
-            "target_type", "trigger_type", "event_type", "timeline_type",
+    // ── long prose: description / content / body / bio / summary / note ──────
+    if contains_any(
+        &n,
+        &[
+            "description",
+            "content",
+            "body",
+            "bio",
+            "biography",
+            "summary",
+            "detail",
+            "note",
+            "remark",
+            "message",
+            "about",
+            "before",
+            "after",
+        ],
+    ) {
+        let word_count = rand::thread_rng().gen_range(8..=25_usize);
+        let words: Vec<String> = (0..word_count)
+            .map(|_| gen_word(rand::thread_rng().gen_range(3..=9)))
+            .collect();
+        let s = words.join(" ");
+        let s = if s.len() > max_len {
+            s[..max_len].to_string()
+        } else {
+            s
+        };
+        return sql_str(s);
+    }
+
+    // ── short label: title / subject / name / username / label / tag / role ──
+    if contains_any(
+        &n,
+        &[
+            "title",
+            "subject",
+            "headline",
+            "caption",
+            "label",
+            "tag",
+            "category",
+            "role",
+            "reason",
+            "action",
+            "type",
+            "status",
+            "state",
+            "target_type",
+            "trigger_type",
+            "event_type",
+            "timeline_type",
             "ptype",
-        ]) || matches!(n.as_str(), "v0" | "v1" | "v2" | "v3" | "v4" | "v5")
-        {
-            let word_count = rand::thread_rng().gen_range(1..=2_usize);
-            let words: Vec<String> = (0..word_count)
-                .map(|_| gen_capitalized_word(rand::thread_rng().gen_range(3..=8)))
-                .collect();
-            let s = words.join(" ");
-            if s.len() > max_len { return s[..max_len].to_string() } else { return s };
-        }
+        ],
+    ) || matches!(n.as_str(), "v0" | "v1" | "v2" | "v3" | "v4" | "v5")
+    {
+        let word_count = rand::thread_rng().gen_range(1..=2_usize);
+        let words: Vec<String> = (0..word_count)
+            .map(|_| gen_capitalized_word(rand::thread_rng().gen_range(3..=8)))
+            .collect();
+        let s = words.join(" ");
+        let s = if s.len() > max_len {
+            s[..max_len].to_string()
+        } else {
+            s
+        };
+        return sql_str(s);
+    }
 
-
-        // ── unique username ────────────────────────────────────────────────────
-        if contains_any(&n, &["username", "name", "login"]) {
-            let unique_name = crate::datapool::unique_username();  // 调用唯一生成器
-            return sql_str(unique_name);
-        }
-
-        // ── token / jti / file_id / stored_name / stored_path etc. ─────────
-        let len = rand::thread_rng().gen_range(8..=max_len.min(64)).max(1);
-        gen_alphanum(len)
-    };
-
-    // 关键：通过上下文获取值（自动处理唯一性）
-    let raw_value = ctx.gen_value_for_column(col, max_len, generate_raw);
-    sql_str(raw_value)
+    // ── token / jti / file_id / stored_name / stored_path / script_url etc. ─
+    // These are opaque identifiers — use random alphanum of appropriate length.
+    let len = rand::thread_rng().gen_range(8..=max_len.min(64)).max(1);
+    sql_str(gen_alphanum(len))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -459,11 +517,14 @@ fn gen_text_for_col(ctx: &GenContext, col: &ColumnSchema, max_len: usize) -> Str
 
 /// PostgreSQL BOOLEAN literal.
 fn gen_bool() -> String {
-    if rand::thread_rng().gen_bool(0.5) { "true".to_string() } else { "false".to_string() }
+    if rand::thread_rng().gen_bool(0.5) {
+        "true".to_string()
+    } else {
+        "false".to_string()
+    }
 }
 
 /// JSON object with 1-4 algorithmically generated key/value pairs.
-/// 生成一个 JSON 对象，包含 1 到 4 个键值对。
 fn gen_json() -> String {
     let mut rng = rand::thread_rng();
     let n = rng.gen_range(1_usize..=4);
@@ -473,7 +534,13 @@ fn gen_json() -> String {
             let v = match i % 4 {
                 0 => rng.gen_range(0_i64..=9_999).to_string(),
                 1 => format!("\"{}\"", gen_alphanum(rng.gen_range(4..=10))),
-                2 => if rng.gen_bool(0.5) { "true".to_string() } else { "false".to_string() },
+                2 => {
+                    if rng.gen_bool(0.5) {
+                        "true".to_string()
+                    } else {
+                        "false".to_string()
+                    }
+                }
                 _ => format!("{:.2}", rng.gen_range(0.0_f64..=100.0)),
             };
             format!("\"{}\":{}", k, v)
@@ -484,7 +551,6 @@ fn gen_json() -> String {
 
 /// TIMESTAMP WITH TIME ZONE — PostgreSQL format with explicit UTC offset.
 /// e.g. '2024-03-15 08:42:17+00'
-/// 生成一个 TIMESTAMP WITH TIME ZONE 的 PostgreSQL 格式，带有显式的 UTC 偏移量。
 fn gen_timestamptz() -> String {
     let (days, secs) = rand_offset();
     let ts = Utc::now() - Duration::days(days) - Duration::seconds(secs);
@@ -493,7 +559,6 @@ fn gen_timestamptz() -> String {
 
 /// TIMESTAMP WITHOUT TIME ZONE — no offset suffix.
 /// e.g. '2024-03-15 08:42:17'
-/// 生成一个 TIMESTAMP WITHOUT TIME ZONE 的 PostgreSQL 格式，没有偏移量后缀。
 fn gen_timestamp() -> String {
     let (days, secs) = rand_offset();
     let ts = Utc::now() - Duration::days(days) - Duration::seconds(secs);
@@ -501,7 +566,6 @@ fn gen_timestamp() -> String {
 }
 
 /// DATE — 'YYYY-MM-DD'
-/// 生成一个 DATE 的 PostgreSQL 格式。
 fn gen_date() -> String {
     let days: i64 = rand::thread_rng().gen_range(0..=1_825);
     let d = (Utc::now() - Duration::days(days)).date_naive();
@@ -509,7 +573,6 @@ fn gen_date() -> String {
 }
 
 /// TIME — 'HH:MM:SS'
-/// 生成一个 TIME 的 PostgreSQL 格式。
 fn gen_time() -> String {
     let mut rng = rand::thread_rng();
     sql_str(format!(
@@ -519,39 +582,43 @@ fn gen_time() -> String {
         rng.gen_range(0..=59_u8),
     ))
 }
-/// 生成一个随机的 UTC 偏移量。
+
 fn rand_offset() -> (i64, i64) {
     let mut rng = rand::thread_rng();
     (rng.gen_range(0..=730), rng.gen_range(0..=86_399))
 }
 
 /// Lowercase alphanum: a-z 0-9
-/// 生成一个小写字母数字的字符串。
 fn gen_alphanum(len: usize) -> String {
     const C: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
     let mut rng = rand::thread_rng();
-    (0..len).map(|_| C[rng.gen_range(0..C.len())] as char).collect()
+    (0..len)
+        .map(|_| C[rng.gen_range(0..C.len())] as char)
+        .collect()
 }
 
 /// URL-safe base64 alphabet
-/// 生成一个 URL 安全的 base64 字符串。
 fn gen_base64url(len: usize) -> String {
     const C: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     let mut rng = rand::thread_rng();
-    (0..len).map(|_| C[rng.gen_range(0..C.len())] as char).collect()
+    (0..len)
+        .map(|_| C[rng.gen_range(0..C.len())] as char)
+        .collect()
 }
 
 /// Lowercase alpha-only word (a-z)
-/// 生成一个小写字母单词。
 fn gen_word(len: usize) -> String {
     let mut rng = rand::thread_rng();
-    (0..len).map(|_| rng.gen_range(b'a'..=b'z') as char).collect()
+    (0..len)
+        .map(|_| rng.gen_range(b'a'..=b'z') as char)
+        .collect()
 }
 
 /// Capitalized word (first char A-Z, rest a-z)
-/// 生成一个首字母大写的单词。
 fn gen_capitalized_word(len: usize) -> String {
-    if len == 0 { return String::new(); }
+    if len == 0 {
+        return String::new();
+    }
     let w = gen_word(len);
     let mut c = w.chars();
     match c.next() {
@@ -561,14 +628,17 @@ fn gen_capitalized_word(len: usize) -> String {
 }
 
 /// Slug: lowercase words joined with hyphens
-/// 生成一个 slug，小写单词用连字符连接。
 fn gen_slug(max_len: usize) -> String {
     let word_count = rand::thread_rng().gen_range(2..=4_usize);
     let words: Vec<String> = (0..word_count)
         .map(|_| gen_word(rand::thread_rng().gen_range(3..=7)))
         .collect();
     let s = words.join("-");
-    if s.len() > max_len { s[..max_len].to_string() } else { s }
+    if s.len() > max_len {
+        s[..max_len].to_string()
+    } else {
+        s
+    }
 }
 
 /// One of five generic TLDs — chosen by index so no static slice needed at call site.
@@ -580,17 +650,15 @@ fn pick_tld() -> &'static str {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
-/// 转义单引号
+
 fn sql_str(s: String) -> String {
     format!("'{}'", s.replace('\'', "''"))
 }
 
-/// 检测字符串是否包含任意 needle
 fn contains_any(hay: &str, needles: &[&str]) -> bool {
     needles.iter().any(|n| hay.contains(n))
 }
 
-/// 检测字符串是否以任意 needle 结尾
 fn ends_with_any(hay: &str, needles: &[&str]) -> bool {
     needles.iter().any(|n| hay.ends_with(n))
 }

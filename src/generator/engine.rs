@@ -1,18 +1,17 @@
 //! engine.rs — orchestrates FK-safe, dependency-ordered mock data generation.
 //!
-//! FK pool strategy (in priority order for each referenced table):
+//! FK pool strategy (in priority order):
+//!   1. Already generated this session → RETURNING IDs
+//!   2. Exists in DB but not requested → query_ids()
+//!   3. Nowhere → nullable FK → NULL; non-nullable → DB error surfaced
 //!
-//!   1. **Already generated this session** → pool built from RETURNING IDs.
-//!   2. **Exists in DB but not in this session** → query real IDs via query_ids().
-//!   3. **Nowhere** (table not in DB yet and not requested) → empty pool.
-//!      FK columns that are nullable → NULL; non-nullable → error surfaced.
+//! Self-referencing FKs (e.g. boards.parent_id → boards.id):
+//!   All set to NULL so every row is a valid root node.
 //!
-//! Self-referencing FKs (parent_id → same table):
-//!   • First batch is generated with self-ref column forced to NULL (allowed
-//!     only when the column is nullable, which parent_id always is in practice).
-//!   • After inserting, real IDs are queried and subsequent rows can reference
-//!     them.  Since we generate everything in one shot we just set all
-//!     self-ref FKs to NULL — this is valid for tree roots.
+//! Config integration:
+//!   When a MockConfig is provided, each table's FieldConfig overrides are
+//!   passed to build_insert_batches. FieldKind::Skip columns are excluded
+//!   from the INSERT column list entirely.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -22,10 +21,10 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::core::driver::DatabaseDriver;
 use crate::core::generator::{DataGenerator, GenerationReport};
-use crate::core::schema::{Schema, TableSchema};
+use crate::core::schema::Schema;
 use crate::errors::{MockerError, Result};
-use crate::fieldconfig;
-use crate::fieldconfig::MockConfig;
+use crate::fieldconfig::generate::reset_unique_counters;
+use crate::fieldconfig::infer::MockConfig;
 use crate::generator::batch::build_insert_batches;
 use crate::generator::dependency::topological_sort;
 
@@ -33,12 +32,11 @@ use crate::generator::dependency::topological_sort;
 
 pub struct MockEngine {
     driver: Arc<dyn DatabaseDriver>,
-    mock_config: Option<MockConfig>,
 }
 
 impl MockEngine {
-    pub fn new(driver: Arc<dyn DatabaseDriver>,mock_config: Option<MockConfig>) -> Self {
-        Self { driver,mock_config }
+    pub fn new(driver: Arc<dyn DatabaseDriver>) -> Self {
+        Self { driver }
     }
 }
 
@@ -50,12 +48,13 @@ impl DataGenerator for MockEngine {
         &self,
         schema: &Schema,
         row_counts: &HashMap<String, usize>,
-        preview: bool,
-        _mock_config: Option<&MockConfig>,
-
-
+        dry_run: bool,
+        mock_config: Option<&MockConfig>,
     ) -> Result<GenerationReport> {
-        // Validate all requested tables exist in schema
+        // Reset unique/sequence counters for a fresh run
+        reset_unique_counters();
+
+        // Validate requested tables
         let requested: Vec<String> = row_counts.keys().cloned().collect();
         for t in &requested {
             if schema.get_table(t).is_none() {
@@ -63,30 +62,22 @@ impl DataGenerator for MockEngine {
             }
         }
 
-        let sorted   = topological_sort(schema, &requested)?;
-        let db_type  = self.driver.db_type().to_string();
+        let sorted  = topological_sort(schema, &requested)?;
+        let db_type = self.driver.db_type().to_string();
         let mut report = GenerationReport::default();
 
-        // ── FK id pools ───────────────────────────────────────────────────────
-        // Maps: table_name → Vec<SQL literal> of known PK values
+        // ── pre-load FK pools from DB ─────────────────────────────────────────
         let mut fk_pools: HashMap<String, Vec<String>> = HashMap::new();
+        let referenced = collect_referenced_tables(schema, &requested);
 
-        // Pre-load real IDs from the DB for every table that has FK
-        // relationships with our requested tables (whether requested or not).
-        let referenced_tables = collect_referenced_tables(schema, &requested);
-        if !preview {
-            for ref_table in &referenced_tables {
+        if !dry_run {
+            for ref_table in &referenced {
                 let pk_col = pk_col_name(schema, ref_table);
                 match self.driver.query_ids(ref_table, &pk_col, 2000).await {
                     Ok(ids) if !ids.is_empty() => {
                         fk_pools.insert(ref_table.clone(), ids);
                     }
-                    Ok(_) => {
-                        // Table exists but is empty — pool stays absent.
-                    }
-                    Err(_) => {
-                        // Table may not exist yet; that is fine.
-                    }
+                    _ => {} // empty or missing — handled per-column in batch
                 }
             }
         }
@@ -111,8 +102,7 @@ impl DataGenerator for MockEngine {
             let ts = schema.get_table(table_name).unwrap();
             bar.set_message(format!("{} → {} rows", table_name, row_count));
 
-            // Detect self-referencing FKs (parent_id → same table).
-            // These are passed to batch builder so it can emit NULL for them.
+            // Self-referencing FK columns → always NULL
             let self_ref_cols: Vec<String> = ts
                 .foreign_keys
                 .iter()
@@ -120,44 +110,41 @@ impl DataGenerator for MockEngine {
                 .map(|fk| fk.column.clone())
                 .collect();
 
+            // Per-table field config (if a mock_config was provided)
+            let table_cfg = mock_config.and_then(|mc| mc.get(table_name));
+
             let stmts = build_insert_batches(
                 ts,
                 row_count,
                 &db_type,
                 &fk_pools,
                 &self_ref_cols,
-                None,
+                table_cfg,
             );
 
-            if preview {
+            if dry_run {
                 for s in &stmts {
                     println!("{};", s);
                     report.sql_statements.push(s.clone());
                 }
-                // For dry-run, build a synthetic sequential pool so downstream
-                // FK tables render correctly.
-                let pool = synthetic_int_pool(row_count);
-                fk_pools.insert(table_name.clone(), pool);
+                fk_pools.insert(table_name.clone(), synthetic_int_pool(row_count));
             } else {
                 let pk_col = pk_col_name(schema, table_name);
 
-                // Execute with RETURNING to capture actual inserted IDs.
                 match self
                     .driver
                     .execute_batch_returning_ids(stmts, table_name, &pk_col)
                     .await
                 {
                     Ok(ids) => {
-                        let inserted = ids.len() as u64;
-                        report.total_rows_inserted += inserted;
-                        // Use real IDs for downstream FKs.
+                        report.total_rows_inserted += ids.len() as u64;
                         fk_pools.insert(table_name.clone(), ids);
                     }
                     Err(e) => {
                         let msg = format!("Error inserting into {}: {}", table_name, e);
                         eprintln!("⚠️  {}", msg);
                         report.errors.push(msg);
-                        // Even on error, try to fetch whatever landed.
+                        // Rescue whatever actually landed
                         if let Ok(ids) = self
                             .driver
                             .query_ids(table_name, &pk_col, row_count * 2)
@@ -184,16 +171,12 @@ impl DataGenerator for MockEngine {
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Collect all tables that are FK-referenced by any of the requested tables
-/// (including transitively through the schema, but one level is enough for
-/// pool pre-loading).
 fn collect_referenced_tables(schema: &Schema, requested: &[String]) -> Vec<String> {
-    let mut refs: std::collections::HashSet<String> = std::collections::HashSet::new();
-    for table_name in requested {
-        if let Some(ts) = schema.get_table(table_name) {
+    let mut refs = std::collections::HashSet::new();
+    for tname in requested {
+        if let Some(ts) = schema.get_table(tname) {
             for fk in &ts.foreign_keys {
-                // Skip self-references (handled separately)
-                if fk.referenced_table != *table_name {
+                if fk.referenced_table != *tname {
                     refs.insert(fk.referenced_table.clone());
                 }
             }
@@ -202,7 +185,6 @@ fn collect_referenced_tables(schema: &Schema, requested: &[String]) -> Vec<Strin
     refs.into_iter().collect()
 }
 
-/// Return the first PK column name, or "id" as fallback.
 fn pk_col_name(schema: &Schema, table_name: &str) -> String {
     schema
         .get_table(table_name)

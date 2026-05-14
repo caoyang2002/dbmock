@@ -1,21 +1,22 @@
-//! infer.rs — 根据 ColumnSchema 自动推断 FieldKind。
+//! infer.rs — automatic FieldKind inference from ColumnSchema.
 //!
-//! 该模块实现与 value.rs 相同的语义逻辑，但用于生成 FieldKind 赋值，
-//! 而非直接生成值。它会生成初始的 `mock_config.yml` 供用户后续编辑。
+//! This is the same semantic logic as value.rs but expressed as FieldKind
+//! assignments rather than direct value generation. It produces the initial
+//! `mock_config.yml` that users then edit.
 
 use crate::core::schema::{ColumnSchema, Schema, TableSchema};
 use crate::fieldconfig::types::{FieldConfig, FieldKind};
 use std::collections::BTreeMap;
 
-/// 表级别的配置：列名 → FieldConfig
+/// Table-level config: column_name → FieldConfig
 pub type TableFieldConfig = BTreeMap<String, FieldConfig>;
 
-/// 完整的 mock 配置：表名 → TableFieldConfig
+/// Full mock config: table_name → TableFieldConfig
 pub type MockConfig = BTreeMap<String, TableFieldConfig>;
 
-/// 从 Schema 推断完整的 MockConfig。
-/// 每个列都会获得一个带有合理推断 kind 的 FieldConfig。
-/// 自增主键会被标记为 Skip（由数据库自己赋值）。
+/// Infer a full MockConfig from a Schema.
+/// Every column gets a FieldConfig with a sensible inferred kind.
+/// Auto-increment PKs are marked Skip (the DB assigns them).
 pub fn infer_mock_config(schema: &Schema) -> MockConfig {
     let mut config = MockConfig::new();
     for table in &schema.tables {
@@ -24,7 +25,7 @@ pub fn infer_mock_config(schema: &Schema) -> MockConfig {
     config
 }
 
-/// 推断单个表的配置。
+/// Infer config for a single table.
 pub fn infer_table_config(table: &TableSchema) -> TableFieldConfig {
     let mut map = TableFieldConfig::new();
     for col in &table.columns {
@@ -33,30 +34,30 @@ pub fn infer_table_config(table: &TableSchema) -> TableFieldConfig {
     map
 }
 
-/// 推断单个列的配置。
+/// Infer config for one column.
 fn infer_col_config(col: &ColumnSchema, table: &TableSchema) -> FieldConfig {
-    // 自增主键：跳过（由数据库赋值）
+    // Auto-increment PKs: skip (DB assigns)
     if col.is_auto_increment {
         return FieldConfig { kind: FieldKind::Skip, ..Default::default() };
     }
 
-    // 自引用外键（parent_id → 同一张表）：若可为空则直接生成 null
+    // Self-referencing FK (parent_id → same table): nullable → null
     let is_self_ref = table.foreign_keys.iter()
         .any(|fk| fk.column == col.name && fk.referenced_table == table.name);
     if is_self_ref && col.is_nullable {
         return FieldConfig { kind: FieldKind::Null, ..Default::default() };
     }
 
-    // 外键列：使用 Default（由引擎处理外键池）
+    // FK columns: use Default (engine handles FK pools)
     let is_fk = table.foreign_keys.iter().any(|fk| fk.column == col.name);
     if is_fk {
         return FieldConfig { kind: FieldKind::Default, ..Default::default() };
     }
 
-    // 根据数据类型 + 列名推断 kind
+    // Infer from data type + column name
     let kind = infer_kind_from_col(col);
 
-    // 根据推断的 kind 构建带有合理默认值的 FieldConfig
+    // Build FieldConfig with sensible defaults per kind
     build_config(kind, col)
 }
 
@@ -64,7 +65,7 @@ fn infer_kind_from_col(col: &ColumnSchema) -> FieldKind {
     let dt = col.data_type.to_lowercase();
     let n  = col.name.to_lowercase();
 
-    // ── 优先根据数据类型判断 ─────────────────────────────────────────────────────
+    // ── by data type first ────────────────────────────────────────────────────
     if dt == "uuid"                                         { return FieldKind::Uuid; }
     if dt == "boolean" || dt == "bool" || dt == "bit"      { return FieldKind::Bool; }
     if dt == "json"    || dt == "jsonb"                     { return FieldKind::Json; }
@@ -81,7 +82,7 @@ fn infer_kind_from_col(col: &ColumnSchema) -> FieldKind {
     if is_float_type(&dt)                                   { return FieldKind::Float; }
     if is_decimal_type(&dt)                                 { return FieldKind::Decimal; }
 
-    // ── 文本类型：根据列名进一步细化 ───────────────────────────────────────────
+    // ── text family: refine by column name ───────────────────────────────────
     if is_text_type(&dt) {
         return infer_text_by_name(&n);
     }
@@ -91,7 +92,7 @@ fn infer_kind_from_col(col: &ColumnSchema) -> FieldKind {
 
 fn infer_int_by_name(n: &str) -> FieldKind {
     if ends_with_any(n, &["_count","_num","_number","_qty","_total","_rank","_score","_size","_order","_seq"]) {
-        return FieldKind::Int; // 小范围非负整数
+        return FieldKind::Int; // small non-negative
     }
     FieldKind::Int
 }
@@ -178,7 +179,7 @@ fn build_config(kind: FieldKind, col: &ColumnSchema) -> FieldConfig {
     }
 }
 
-// ── 类型判断辅助函数 ─────────────────────────────────────────────────────────
+// ── type classifiers ─────────────────────────────────────────────────────────
 
 fn is_int_type(dt: &str) -> bool {
     matches!(dt,
@@ -197,8 +198,8 @@ fn is_decimal_type(dt: &str) -> bool {
 
 fn is_text_type(dt: &str) -> bool {
     dt == "character varying" || dt == "character" ||
-        dt.contains("varchar") || dt.contains("char") || dt.contains("text") ||
-        matches!(dt, "clob"|"citext"|"name")
+    dt.contains("varchar") || dt.contains("char") || dt.contains("text") ||
+    matches!(dt, "clob"|"citext"|"name")
 }
 
 fn int_max_for_type(dt: &str) -> i64 {

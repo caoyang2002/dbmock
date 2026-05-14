@@ -23,10 +23,15 @@ db-json:
 
 db-sql:
 	@echo "开始提取数据库结构..."
+	$(BIN) extract -s schema.sql
 
 build:
 	@echo "构建..."
 	@cargo build --release
+	@cp ./target/release/datamocker ./datamocker
+
+log:
+	@RUST_LOG=sqlx::query=debug ./datamocker extract -j schema.json 2> sql.log
 
 test:
 	@echo "测试..."
@@ -40,5 +45,3 @@ help:
 	@echo " 	db-config: 生成数据库结构的配置文件"
 	@echo " generate: 生成 mock 数据"
 	@echo " 	db-json: 生成 mock 数据"
-
-
