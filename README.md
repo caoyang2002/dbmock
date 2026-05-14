@@ -24,7 +24,7 @@
 手动构建：
 
 ```bash
-git clone https://github.com/yourusername/dbmock.git
+git clone https://github.com/caoyang2002/dbmock.git
 cd dbmock
 cargo build --release
 # 二进制位于 target/release/dbmock
