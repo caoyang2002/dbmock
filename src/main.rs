@@ -219,10 +219,10 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
     }
     println!();
 
-    // ── dry run ──────────────────────────────────────────────────────────────
-    if args.dry_run {
-        println!("🔬  Dry-run mode — SQL preview:\n");
-        let engine = DryRunEngine {
+    // ── preview  ──────────────────────────────────────────────────────────────
+    if args.preview {
+        println!("🔬  Preview mode — SQL preview:\n");
+        let engine = PreviewEngine {
             db_type: schema_obj.database_type.clone(),
         };
         engine
@@ -271,20 +271,20 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DryRunEngine — runs generate without a DB connection
+// PreviewEngine — runs generate without a DB connection
 // ─────────────────────────────────────────────────────────────────────────────
 
-struct DryRunEngine {
+struct PreviewEngine {
     db_type: String,
 }
 
 #[async_trait::async_trait]
-impl DataGenerator for DryRunEngine {
+impl DataGenerator for PreviewEngine {
     async fn generate(
         &self,
         schema: &core::schema::Schema,
         row_counts: &HashMap<String, usize>,
-        _dry_run: bool,
+        _preview: bool,
         mock_config: Option<&MockConfig>,
     ) -> Result<core::generator::GenerationReport> {
         use fieldconfig::generate::reset_unique_counters;
@@ -315,7 +315,7 @@ impl DataGenerator for DryRunEngine {
                 .collect();
 
             let table_cfg = mock_config.and_then(|mc| mc.get(tname));
-
+            println!("构建插入语句");
             let stmts = build_insert_batches(
                 ts,
                 count,
@@ -323,6 +323,7 @@ impl DataGenerator for DryRunEngine {
                 &fk_pools,
                 &self_ref_cols,
                 table_cfg,
+                5000,
             );
 
             for s in &stmts {
@@ -330,6 +331,7 @@ impl DataGenerator for DryRunEngine {
                 report.sql_statements.push(s.clone());
             }
 
+            println!("执行插入");
             // Synthetic pool for downstream FK columns
             fk_pools.insert(tname.clone(), (1..=count).map(|i| i.to_string()).collect());
             report.tables_processed += 1;
@@ -363,6 +365,8 @@ fn load_schema(json_path: Option<&str>, sql_path: Option<&str>) -> Result<core::
     })
 }
 
+// fn load_config(){}
+/// 构建数据库配置
 fn build_db_config(
     db_type: &str,
     host: &str,

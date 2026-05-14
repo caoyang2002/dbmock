@@ -64,6 +64,9 @@ impl DatabaseDriver for PostgresDriver {
         let mut total: u64 = 0;
         for sql in statements {
             let r = sqlx::query(&sql).execute(&mut *tx).await?;
+            sqlx::query("SET LOCAL statement_timeout = '30s'")
+                .execute(&mut *tx)
+                .await?;
             total += r.rows_affected();
         }
         tx.commit().await?;

@@ -1,16 +1,16 @@
-use sqlx::postgres::PgPoolOptions;
-use sqlx::mysql::MySqlPoolOptions;
-use sqlx::sqlite::SqlitePoolOptions;
 use crate::config::{DatabaseConfig, DbType};
-use crate::errors::{MockerError, Result};
 use crate::db::types::DbPool;
+use crate::errors::{MockerError, Result};
+use sqlx::mysql::MySqlPoolOptions;
+use sqlx::postgres::PgPoolOptions;
+use sqlx::sqlite::SqlitePoolOptions;
 
 pub async fn create_pool(config: &DatabaseConfig) -> Result<DbPool> {
     let conn_str = config.connection_string();
     match config.db_type {
         DbType::Postgres => {
             let pool = PgPoolOptions::new()
-                .max_connections(10)
+                .max_connections(20)
                 .connect(&conn_str)
                 .await
                 .map_err(|e| MockerError::Connection {

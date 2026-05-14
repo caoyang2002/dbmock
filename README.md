@@ -65,6 +65,10 @@ export DATABASE_URL="postgresql://username:password@localhost/mydb"
 datamocker extract -j schema.json
 ```
 
+```bash
+ cargo run -- generate -j schema.json -c config.yml --rows users=1000
+ ```
+
 ## 三、命令详解
 
 ### `extract` – 提取数据库结构

@@ -1,12 +1,15 @@
-//! batch.rs — build batched INSERT SQL statements from schema metadata.
+//! batch.rs — pure value-generation; no I/O.
 //!
-//! Value resolution priority for each column:
-//!   1. Self-referencing FK → NULL
-//!   2. FK with non-empty pool → random pool entry
-//!   3. FK with empty pool + nullable → NULL
-//!   4. FieldConfig present → generate_with_config()
-//!      • FieldKind::Skip → exclude column from INSERT
-//!   5. Fallback → schema-driven generate_value()
+//! `build_insert_batches` is called from a `spawn_blocking` thread so all
+//! CPU-bound work (rand, string formatting) stays off the async executor.
+//!
+//! Value resolution priority per column:
+//!   1. Auto-increment / Skip    → excluded from column list
+//!   2. Self-referencing FK      → NULL
+//!   3. FK with pool             → random pool entry   (O(1), no clone)
+//!   4. FK nullable, empty pool  → NULL
+//!   5. FieldConfig override     → generate_with_config()
+//!   6. Fallback                 → schema-driven generate_value()
 
 use std::collections::HashMap;
 
@@ -15,14 +18,15 @@ use rand::Rng;
 use crate::core::schema::{ColumnSchema, TableSchema};
 use crate::fieldconfig::generate::generate_with_config;
 use crate::fieldconfig::infer::TableFieldConfig;
+use crate::fieldconfig::types::FieldKind;
 use crate::generator::value::generate_value;
 
-const BATCH_SIZE: usize = 500;
-
-/// Build all INSERT statements for `table`, generating `row_count` rows.
+/// Build all INSERT statements for `table`.
 ///
-/// - `fk_id_pools`   : table → Vec of SQL literals for known PK values
-/// - `self_ref_cols` : column names that self-reference (set to NULL)
+/// - `row_count`     : total rows to generate
+/// - `insert_rows`   : rows per INSERT statement (e.g. 1_000)
+/// - `fk_id_pools`   : table → pool of SQL literals for FK values
+/// - `self_ref_cols` : column names with self-referencing FK (→ NULL)
 /// - `table_config`  : optional per-column FieldConfig overrides
 pub fn build_insert_batches(
     table: &TableSchema,
@@ -31,21 +35,23 @@ pub fn build_insert_batches(
     fk_id_pools: &HashMap<String, Vec<String>>,
     self_ref_cols: &[String],
     table_config: Option<&TableFieldConfig>,
+    insert_rows: usize,
 ) -> Vec<String> {
-    if row_count == 0 {
+    if row_count == 0 || insert_rows == 0 {
         return vec![];
     }
 
-    // Columns to INSERT: exclude auto-increment, and also any col marked Skip.
+    // ── build the ordered, filtered column list ───────────────────────────────
     let cols: Vec<&ColumnSchema> = table
         .columns
         .iter()
         .filter(|c| {
-            if c.is_auto_increment { return false; }
-            // If config says Skip, exclude from column list entirely.
+            if c.is_auto_increment {
+                return false;
+            }
             if let Some(cfg) = table_config {
                 if let Some(fc) = cfg.get(&c.name) {
-                    if fc.kind == crate::fieldconfig::types::FieldKind::Skip {
+                    if fc.kind == FieldKind::Skip {
                         return false;
                     }
                 }
@@ -58,34 +64,40 @@ pub fn build_insert_batches(
         return vec![];
     }
 
-    let table_q  = qi(&table.name, db_type);
-    let col_list = cols.iter().map(|c| qi(&c.name, db_type)).collect::<Vec<_>>().join(", ");
+    let table_q = qi(&table.name, db_type);
+    let col_list = cols
+        .iter()
+        .map(|c| qi(&c.name, db_type))
+        .collect::<Vec<_>>()
+        .join(", ");
 
-    // Pre-compute strategy per column (avoids repeated lookups per row).
+    // ── pre-compute per-column strategy (done once, not per row) ─────────────
     let strategies: Vec<ColStrategy> = cols
         .iter()
         .map(|col| resolve_strategy(col, table, fk_id_pools, self_ref_cols, table_config))
         .collect();
 
-    let mut statements = Vec::new();
-    let mut batch: Vec<String> = Vec::with_capacity(BATCH_SIZE);
+    // ── generate rows ─────────────────────────────────────────────────────────
+    // Pre-size the output vector to avoid reallocations.
+    let n_stmts = row_count.div_ceil(insert_rows);
+    let mut statements: Vec<String> = Vec::with_capacity(n_stmts);
 
-    for _ in 0..row_count {
-        let values: Vec<String> = strategies
-            .iter()
-            .zip(cols.iter())
-            .map(|(strat, col)| apply_strategy(strat, col, db_type))
-            .collect();
+    // Reuse a Vec<String> for values and a String for the row buffer to avoid
+    // repeated allocations inside the hot loop.
+    let mut batch: Vec<String> = Vec::with_capacity(insert_rows);
+    let mut values_buf: Vec<String> = Vec::with_capacity(cols.len());
 
-        batch.push(format!("({})", values.join(", ")));
+    for row_idx in 0..row_count {
+        values_buf.clear();
+        for (strat, col) in strategies.iter().zip(cols.iter()) {
+            values_buf.push(apply_strategy(strat, col, db_type));
+        }
+        batch.push(format!("({})", values_buf.join(", ")));
 
-        if batch.len() >= BATCH_SIZE {
+        if batch.len() >= insert_rows || row_idx == row_count - 1 {
             statements.push(make_insert(&table_q, &col_list, &batch));
             batch.clear();
         }
-    }
-    if !batch.is_empty() {
-        statements.push(make_insert(&table_q, &col_list, &batch));
     }
 
     statements
@@ -93,60 +105,56 @@ pub fn build_insert_batches(
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[derive(Clone)]
-enum ColStrategy {
-    /// Always NULL (self-ref or empty nullable FK).
+enum ColStrategy<'a> {
     ForceNull,
-    /// Random pick from FK pool.
-    FkPool(Vec<String>),
-    /// Use FieldConfig (carries unique_key for unique/sequence counters).
+    /// Borrow the pool slice — no clone of the entire Vec.
+    FkPool(&'a [String]),
     Configured {
-        fc: crate::fieldconfig::types::FieldConfig,
+        fc: &'a crate::fieldconfig::types::FieldConfig,
         unique_key: String,
     },
-    /// Schema-driven fallback.
     Generate,
 }
 
-fn resolve_strategy(
+fn resolve_strategy<'a>(
     col: &ColumnSchema,
     table: &TableSchema,
-    fk_id_pools: &HashMap<String, Vec<String>>,
+    fk_id_pools: &'a HashMap<String, Vec<String>>,
     self_ref_cols: &[String],
-    table_config: Option<&TableFieldConfig>,
-) -> ColStrategy {
-    // 1. Self-referencing FK → NULL
+    table_config: Option<&'a TableFieldConfig>,
+) -> ColStrategy<'a> {
+    // 1. Self-ref FK
     if self_ref_cols.contains(&col.name) {
         return ColStrategy::ForceNull;
     }
 
-    // 2. FK columns
+    // 2. Regular FK
     if let Some(fk) = table.foreign_keys.iter().find(|fk| fk.column == col.name) {
         if let Some(pool) = fk_id_pools.get(&fk.referenced_table) {
             if !pool.is_empty() {
-                return ColStrategy::FkPool(pool.clone());
+                return ColStrategy::FkPool(pool.as_slice());
             }
         }
         if col.is_nullable {
             return ColStrategy::ForceNull;
         }
-        // Non-nullable FK with empty pool: fall through to config/generate;
-        // the DB will surface the constraint error.
+        // Non-nullable FK, empty pool → fall through; DB will report the error.
     }
 
     // 3. FieldConfig override
     if let Some(cfg) = table_config {
         if let Some(fc) = cfg.get(&col.name) {
             let unique_key = format!("{}.{}", table.name, col.name);
-            return ColStrategy::Configured { fc: fc.clone(), unique_key };
+            return ColStrategy::Configured { fc, unique_key };
         }
     }
 
-    // 4. Schema-driven fallback
+    // 4. Schema-driven default
     ColStrategy::Generate
 }
 
-fn apply_strategy(strat: &ColStrategy, col: &ColumnSchema, db_type: &str) -> String {
+#[inline]
+fn apply_strategy(strat: &ColStrategy<'_>, col: &ColumnSchema, db_type: &str) -> String {
     match strat {
         ColStrategy::ForceNull => "NULL".to_string(),
 
@@ -157,9 +165,9 @@ fn apply_strategy(strat: &ColStrategy, col: &ColumnSchema, db_type: &str) -> Str
 
         ColStrategy::Configured { fc, unique_key } => {
             match generate_with_config(col, fc, unique_key, db_type) {
-                Some(v) if v == "__SKIP__" => "NULL".to_string(), // shouldn't reach here
+                Some(v) if v == "__SKIP__" => "NULL".to_string(),
                 Some(v) => v,
-                None    => generate_value(col, db_type), // FieldKind::Default
+                None => generate_value(col, db_type),
             }
         }
 
@@ -167,10 +175,29 @@ fn apply_strategy(strat: &ColStrategy, col: &ColumnSchema, db_type: &str) -> Str
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 fn make_insert(table_q: &str, col_list: &str, rows: &[String]) -> String {
-    format!("INSERT INTO {} ({}) VALUES {}", table_q, col_list, rows.join(", "))
+    // Pre-size the output string to avoid reallocs:
+    // rough estimate: avg 50 chars per row
+    let mut out = String::with_capacity(
+        "INSERT INTO  () VALUES ".len() + table_q.len() + col_list.len() + rows.len() * 60,
+    );
+    out.push_str("INSERT INTO ");
+    out.push_str(table_q);
+    out.push_str(" (");
+    out.push_str(col_list);
+    out.push_str(") VALUES ");
+    for (i, row) in rows.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        out.push_str(row);
+    }
+    out
 }
 
+#[inline]
 fn qi(name: &str, db_type: &str) -> String {
     if db_type == "mysql" || db_type == "mariadb" {
         format!("`{}`", name)

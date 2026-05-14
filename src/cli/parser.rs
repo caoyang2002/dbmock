@@ -121,12 +121,17 @@ pub struct GenerateArgs {
     pub mock_config: Option<String>,
 
     /// Row counts per table: TABLE=COUNT  (repeatable)
-    #[arg(short = 'r', long = "rows", value_name = "TABLE=COUNT", required = true)]
+    #[arg(
+        short = 'r',
+        long = "rows",
+        value_name = "TABLE=COUNT",
+        required = true
+    )]
     pub rows: Vec<String>,
 
     /// Print SQL without executing (no database connection required)
     #[arg(long, default_value_t = false)]
-    pub dry_run: bool,
+    pub preview: bool,
 
     /// Database type: postgres | mysql | sqlite
     #[arg(long, default_value = "postgres")]
