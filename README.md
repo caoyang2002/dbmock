@@ -108,8 +108,8 @@ dbmock extract -j schema.json
 
 | 参数               | 说明                                | 默认值        |
 | ------------------ | ----------------------------------- | ------------- |
-| `-oj, --output`     | 输出 JSON 文件路径，包含完整的自定义结构化数据，易于本程序读取  | `schema.json` |
-| `-os, --sql`| 输出 sql 文件路径，通过命令|`schema.sql`|
+| `-j, --output`     | 输出 JSON 文件路径，包含完整的自定义结构化数据，易于本程序读取  | `schema.json` |
+| `-s, --sql`| 输出 sql 文件路径，通过命令|`schema.sql`|
 | `--db-type`        | 数据库类型：`postgres`, `mysql`, `sqlite` | `postgres`    |
 | `--db-host`        | 数据库主机                          | `localhost`   |
 | `--db-port`        | 端口                                | 5432/3306     |

@@ -5,13 +5,10 @@
 //!   - A file-level header explaining all type options
 //!   - Per-column comments showing the inferred description
 
-use std::collections::BTreeMap;
-use std::path::Path;
-
 use crate::core::schema::Schema;
 use crate::errors::Result;
 use crate::fieldconfig::infer::{infer_mock_config, MockConfig};
-use crate::fieldconfig::types::{FieldConfig, FieldKind};
+use std::path::Path;
 
 /// Generate a mock_config.yml from a Schema and write it to `path`.
 pub fn export_config(schema: &Schema, path: &Path) -> Result<()> {

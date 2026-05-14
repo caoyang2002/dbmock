@@ -11,23 +11,132 @@
 //!   5. FieldConfig override     → generate_with_config()
 //!   6. Fallback                 → schema-driven generate_value()
 
-use std::collections::HashMap;
-
 use rand::Rng;
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 use crate::core::schema::{ColumnSchema, TableSchema};
+use crate::datapool::UniqueGenerator;
 use crate::fieldconfig::generate::generate_with_config;
 use crate::fieldconfig::infer::TableFieldConfig;
 use crate::fieldconfig::types::FieldKind;
 use crate::generator::value::generate_value;
 
+/// 生成少量样本行（用于 dry-run 预览），不构建完整的 INSERT 语句。
+/// 返回 Vec<Vec<String>>，每个内部 Vec 是一行的所有列值。
+pub fn generate_sample_rows(
+    table: &TableSchema,
+    sample_count: usize,
+    db_type: &str,
+    fk_id_pools: &HashMap<String, Vec<String>>,
+    self_ref_cols: &[String],
+    table_config: Option<&TableFieldConfig>,
+) -> Vec<Vec<String>> {
+    if sample_count == 0 {
+        return vec![];
+    }
+
+    // 构建列列表（与 build_insert_batches 一致）
+    let cols: Vec<&ColumnSchema> = table
+        .columns
+        .iter()
+        .filter(|c| {
+            if c.is_auto_increment {
+                return false;
+            }
+            if let Some(cfg) = table_config {
+                if let Some(fc) = cfg.get(&c.name) {
+                    if fc.kind == FieldKind::Skip {
+                        return false;
+                    }
+                }
+            }
+            true
+        })
+        .collect();
+
+    if cols.is_empty() {
+        return vec![];
+    }
+
+    let strategies: Vec<ColStrategy> = cols
+        .iter()
+        .map(|col| resolve_strategy(col, table, fk_id_pools, self_ref_cols, table_config))
+        .collect();
+
+    let mut rows = Vec::with_capacity(sample_count);
+    for _ in 0..sample_count {
+        let mut row_values = Vec::with_capacity(cols.len());
+        for (strat, col) in strategies.iter().zip(cols.iter()) {
+            row_values.push(apply_strategy(strat, col, db_type));
+        }
+        rows.push(row_values);
+    }
+    rows
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 唯一约束跟踪器（公开发布，供 engine.rs 使用）
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// 管理一张表的所有唯一约束
+pub struct UniqueConstraintTracker {
+    // 每个约束对应一个生成器，存储已使用的组合键字符串
+    generators: Vec<Mutex<UniqueGenerator<String>>>,
+    constraint_cols: Vec<Vec<String>>,
+}
+
+impl UniqueConstraintTracker {
+    pub fn new(constraints: &[Vec<String>]) -> Self {
+        let generators = constraints
+            .iter()
+            .map(|_| Mutex::new(UniqueGenerator::new()))
+            .collect();
+        Self {
+            generators,
+            constraint_cols: constraints.to_vec(),
+        }
+    }
+
+    /// 检查一行是否满足所有唯一约束，若满足则记录并返回 true；否则返回 false
+    pub fn check_and_insert(&self, row_values: &[String], col_names: &[String]) -> bool {
+        for (idx, cols) in self.constraint_cols.iter().enumerate() {
+            // 构建组合键：将约束中涉及的列的值按顺序拼接
+            let mut key_parts = Vec::new();
+            for c in cols {
+                if let Some(pos) = col_names.iter().position(|name| name == c) {
+                    key_parts.push(row_values[pos].clone());
+                } else {
+                    // 该列不在当前插入列表中（可能因 auto_increment 或 skip 被排除）
+                    // 此时无法验证完整性，跳过该约束（但实际不应发生）
+                    continue;
+                }
+            }
+            if key_parts.is_empty() {
+                continue;
+            }
+            let key = key_parts.join("|");
+            let mut gen = self.generators[idx].lock().unwrap();
+            if !gen.insert(key) {
+                return false; // 冲突
+            }
+        }
+        true
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 批量生成 INSERT 语句（核心函数）
+// ─────────────────────────────────────────────────────────────────────────────
+
 /// Build all INSERT statements for `table`.
 ///
-/// - `row_count`     : total rows to generate
-/// - `insert_rows`   : rows per INSERT statement (e.g. 1_000)
-/// - `fk_id_pools`   : table → pool of SQL literals for FK values
-/// - `self_ref_cols` : column names with self-referencing FK (→ NULL)
-/// - `table_config`  : optional per-column FieldConfig overrides
+/// - `row_count`         : total rows to generate
+/// - `insert_rows`       : rows per INSERT statement (e.g. 1_000)
+/// - `fk_id_pools`       : table → pool of SQL literals for FK values
+/// - `self_ref_cols`     : column names with self-referencing FK (→ NULL)
+/// - `table_config`      : optional per-column FieldConfig overrides
+/// - `constraint_tracker`: optional tracker for unique constraints
 pub fn build_insert_batches(
     table: &TableSchema,
     row_count: usize,
@@ -36,6 +145,7 @@ pub fn build_insert_batches(
     self_ref_cols: &[String],
     table_config: Option<&TableFieldConfig>,
     insert_rows: usize,
+    constraint_tracker: Option<&UniqueConstraintTracker>,
 ) -> Vec<String> {
     if row_count == 0 || insert_rows == 0 {
         return vec![];
@@ -71,6 +181,9 @@ pub fn build_insert_batches(
         .collect::<Vec<_>>()
         .join(", ");
 
+    // 提取列名列表，用于唯一约束检查
+    let col_names: Vec<String> = cols.iter().map(|c| c.name.clone()).collect();
+
     // ── pre-compute per-column strategy (done once, not per row) ─────────────
     let strategies: Vec<ColStrategy> = cols
         .iter()
@@ -78,21 +191,47 @@ pub fn build_insert_batches(
         .collect();
 
     // ── generate rows ─────────────────────────────────────────────────────────
-    // Pre-size the output vector to avoid reallocations.
     let n_stmts = row_count.div_ceil(insert_rows);
     let mut statements: Vec<String> = Vec::with_capacity(n_stmts);
-
-    // Reuse a Vec<String> for values and a String for the row buffer to avoid
-    // repeated allocations inside the hot loop.
     let mut batch: Vec<String> = Vec::with_capacity(insert_rows);
     let mut values_buf: Vec<String> = Vec::with_capacity(cols.len());
 
+    const MAX_RETRIES: usize = 100; // 最多重试100次
+
     for row_idx in 0..row_count {
-        values_buf.clear();
-        for (strat, col) in strategies.iter().zip(cols.iter()) {
-            values_buf.push(apply_strategy(strat, col, db_type));
-        }
-        batch.push(format!("({})", values_buf.join(", ")));
+        let mut retries = 0;
+        let final_values = loop {
+            values_buf.clear();
+            for (strat, col) in strategies.iter().zip(cols.iter()) {
+                values_buf.push(apply_strategy(strat, col, db_type));
+            }
+
+            // 唯一约束检查
+            if let Some(tracker) = constraint_tracker {
+                if tracker.check_and_insert(&values_buf, &col_names) {
+                    break values_buf.clone();
+                } else {
+                    retries += 1;
+                    if retries >= MAX_RETRIES {
+                        eprintln!(
+                            "⚠️  Could not generate unique row for {}.{} after {} retries",
+                            table.name,
+                            col_names.join(","),
+                            MAX_RETRIES
+                        );
+                        // 最后依然返回该行（依赖数据库约束报错）
+                        break values_buf.clone();
+                    }
+                    // 继续重试
+                    continue;
+                }
+            } else {
+                // 没有唯一约束，直接使用
+                break values_buf.clone();
+            }
+        };
+
+        batch.push(format!("({})", final_values.join(", ")));
 
         if batch.len() >= insert_rows || row_idx == row_count - 1 {
             statements.push(make_insert(&table_q, &col_list, &batch));
@@ -103,6 +242,8 @@ pub fn build_insert_batches(
     statements
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 辅助类型和函数
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum ColStrategy<'a> {
@@ -175,11 +316,7 @@ fn apply_strategy(strat: &ColStrategy<'_>, col: &ColumnSchema, db_type: &str) ->
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 fn make_insert(table_q: &str, col_list: &str, rows: &[String]) -> String {
-    // Pre-size the output string to avoid reallocs:
-    // rough estimate: avg 50 chars per row
     let mut out = String::with_capacity(
         "INSERT INTO  () VALUES ".len() + table_q.len() + col_list.len() + rows.len() * 60,
     );

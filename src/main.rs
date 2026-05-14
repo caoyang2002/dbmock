@@ -8,12 +8,13 @@ mod errors;
 mod fieldconfig;
 mod generator;
 mod schema;
-use crate::config::auto_tune;
-use crate::config::TuningParams;
-
+use crate::{config::auto_tune, generator::batch::UniqueConstraintTracker};
+use std::cmp::max;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
+mod logger;
+use logger::print_sample_table;
 
 use clap::Parser;
 
@@ -23,6 +24,7 @@ use core::generator::DataGenerator;
 use errors::{MockerError, Result};
 use fieldconfig::infer::MockConfig;
 use generator::MockEngine;
+/// 打印表格形式的数据样本
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -328,7 +330,9 @@ impl DataGenerator for PreviewEngine {
         mock_config: Option<&MockConfig>,
     ) -> Result<core::generator::GenerationReport> {
         use fieldconfig::generate::reset_unique_counters;
-        use generator::batch::build_insert_batches;
+        use generator::batch::{
+            build_insert_batches, generate_sample_rows, UniqueConstraintTracker,
+        };
         use generator::dependency::topological_sort;
 
         reset_unique_counters();
@@ -346,7 +350,6 @@ impl DataGenerator for PreviewEngine {
             }
 
             let ts = schema.get_table(tname).unwrap();
-
             let self_ref_cols: Vec<String> = ts
                 .foreign_keys
                 .iter()
@@ -355,7 +358,41 @@ impl DataGenerator for PreviewEngine {
                 .collect();
 
             let table_cfg = mock_config.and_then(|mc| mc.get(tname));
-            println!("构建插入语句");
+            let constraint_tracker = if !ts.unique_constraints.is_empty() {
+                Some(UniqueConstraintTracker::new(&ts.unique_constraints))
+            } else {
+                None
+            };
+
+            // 生成样本行（最多20行）用于预览
+            let sample_size = count.min(20);
+            let sample_rows = generate_sample_rows(
+                ts,
+                sample_size,
+                &self.db_type,
+                &fk_pools,
+                &self_ref_cols,
+                table_cfg,
+            );
+
+            if !sample_rows.is_empty() {
+                // 获取列名（排除自增列）
+                let headers: Vec<String> = ts
+                    .columns
+                    .iter()
+                    .filter(|c| !c.is_auto_increment)
+                    .map(|c| c.name.clone())
+                    .collect();
+                println!(
+                    "\n📊 Sample data for table '{}' ({} rows):",
+                    tname, sample_size
+                );
+                print_sample_table(&sample_rows, &headers);
+            } else {
+                println!("No columns to display for table '{}'", tname);
+            }
+
+            // 仍生成所有 SQL 语句（用于报告，但不打印）
             let stmts = build_insert_batches(
                 ts,
                 count,
@@ -364,15 +401,13 @@ impl DataGenerator for PreviewEngine {
                 &self_ref_cols,
                 table_cfg,
                 5000,
+                constraint_tracker.as_ref(),
             );
-
-            for s in &stmts {
-                println!("{};", s);
-                report.sql_statements.push(s.clone());
+            for s in stmts {
+                report.sql_statements.push(s);
             }
 
-            println!("执行插入");
-            // Synthetic pool for downstream FK columns
+            // 合成外键池供下游表使用
             fk_pools.insert(tname.clone(), (1..=count).map(|i| i.to_string()).collect());
             report.tables_processed += 1;
         }
@@ -380,7 +415,6 @@ impl DataGenerator for PreviewEngine {
         Ok(report)
     }
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilities
 // ─────────────────────────────────────────────────────────────────────────────

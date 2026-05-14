@@ -15,8 +15,22 @@ use uuid::Uuid;
 use crate::{
     core::schema::ColumnSchema,
     datapool::{
-        random_image_url, unique_email, unique_phone_number, unique_username,
-        user::random_avatar_url,
+        random_action, random_address, random_alphanum, random_api_path, random_article,
+        random_article_title, random_assignment_status, random_avatar_url, random_bank_card,
+        random_branch_name, random_brand, random_certificate_number, random_color,
+        random_commit_hash, random_company, random_config_key, random_container_name,
+        random_coupon_code, random_course_name, random_course_type, random_cron_expr,
+        random_database_url, random_difficulty, random_docker_tag, random_environment,
+        random_error_type, random_extension, random_file_hash, random_framework,
+        random_grade_letter, random_http_method, random_image_url, random_ip, random_job,
+        random_jti, random_library, random_license, random_log_level, random_mime_type,
+        random_moderation_status, random_notification_type, random_order_status,
+        random_password_hash, random_payment_method, random_port_string, random_post_status,
+        random_post_type, random_product_name, random_programming_language, random_question_type,
+        random_report_type, random_role, random_sku, random_slug, random_subject, random_tag_name,
+        random_target_type, random_task_status, random_token, random_tracking_number, random_url,
+        random_user_agent, random_version, random_violation_type, unique_email,
+        unique_phone_number, unique_username,
     },
 };
 
@@ -198,13 +212,13 @@ impl TypeKind {
         // "character varying" (PG full name), "character", "varchar", "char",
         // "text", "tinytext", "mediumtext", "longtext", "clob", "citext", "name"
         if dt == "character varying"
-            || dt == "character"
-            || dt.contains("varchar")
-            || dt.contains("char")   // catches char, nchar, bpchar …
-            || dt.contains("text")
-            || dt == "clob"
-            || dt == "citext"
-            || dt == "name"
+|| dt == "character"
+|| dt.contains("varchar")
+|| dt.contains("char")   // catches char, nchar, bpchar …
+|| dt.contains("text")
+|| dt == "clob"
+|| dt == "citext"
+|| dt == "name"
         {
             return TypeKind::Text { max_len: 64 }; // refined in generate()
         }
@@ -338,51 +352,63 @@ impl TypeKind {
 fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
     let n = col.name.to_lowercase();
 
-    // ── email ────────────────────────────────────────────────────────────────
+    // ========== 1. 唯一性字段 ==========
     if contains_any(&n, &["email", "e_mail"]) {
         return sql_str(unique_email());
-        // let user = gen_alphanum(rand::thread_rng().gen_range(4..=10));
-        // let tag: u32 = rand::thread_rng().gen_range(10..=999);
-        // let domain = gen_alphanum(rand::thread_rng().gen_range(4..=9));
-        // return sql_str(format!("{}.{}@{}.{}", user, tag, domain, pick_tld()));
     }
-    if contains_any(&n, &["avatar"]) {
+    if contains_any(&n, &["phone", "mobile", "cell", "fax", "telephone"]) {
+        return sql_str(unique_phone_number());
+    }
+    if contains_any(&n, &["name", "username", "login", "nickname", "fullname"]) {
+        return sql_str(unique_username());
+    }
+
+    // ========== 2. 图片 / 头像 / 封面 ==========
+    if contains_any(&n, &["avatar", "avatar_url"]) {
         return sql_str(random_avatar_url());
     }
-    if contains_any(&n, &["image", "cover"]) {
+    if contains_any(&n, &["image", "cover", "cover_url", "photo", "picture"]) {
         return sql_str(random_image_url());
     }
-
-    // ── url / website ────────────────────────────────────────────────────────
-    if contains_any(&n, &["url", "uri", "website", "homepage", "href"]) {
-        let host = gen_alphanum(rand::thread_rng().gen_range(5..=12));
-        let path = gen_alphanum(rand::thread_rng().gen_range(3..=8));
-        return sql_str(format!("https://www.{}.{}/{}", host, pick_tld(), path));
+    if n == "icon" || n.ends_with("_icon") || n == "icon_url" {
+        return sql_str(random_avatar_url()); // 重用头像生成器
+    }
+    if n == "screenshots" && col.data_type.to_lowercase().contains("json") {
+        // JSON 数组，由 TypeKind::Json 处理，此处不干涉
+        // 但如果是纯文本存储的 URL 列表，可自定义
+        return sql_str(format!("[\"{}\"]", random_image_url()));
     }
 
-    // ── uuid stored as text ──────────────────────────────────────────────────
+    // ========== 3. URL / URI / 网站 ==========
+    if contains_any(
+        &n,
+        &[
+            "url",
+            "uri",
+            "website",
+            "homepage",
+            "href",
+            "link",
+            "homepage_url",
+        ],
+    ) {
+        return sql_str(random_url());
+    }
+    if n == "script_url" || n == "evidence_url" {
+        return sql_str(random_url());
+    }
+
+    // ========== 4. UUID / GUID ==========
     if contains_any(&n, &["uuid", "guid"]) {
         return sql_str(Uuid::new_v4().to_string());
     }
 
-    // ── phone ────────────────────────────────────────────────────────────────
-    if contains_any(&n, &["phone", "mobile", "cell", "fax"]) {
-        return sql_str(unique_phone_number());
-        // let mut rng = rand::thread_rng();
-        // let cc: u16 = rng.gen_range(1..=99);
-        // let sub: u64 = rng.gen_range(100_000_000..=9_999_999_999);
-        // return sql_str(format!("+{}{}", cc, sub));
+    // ========== 5. 密码哈希 ==========
+    if contains_any(&n, &["password", "passwd", "pwd", "hash", "secret"]) {
+        return sql_str(random_password_hash());
     }
 
-    // ── hashed credential  (password / secret / hash — NOT token/jti which are random strings) ──
-    if contains_any(&n, &["password", "passwd", "pwd"]) {
-        let rounds: u8 = rand::thread_rng().gen_range(10..=13);
-        let salt = gen_base64url(22);
-        let hash = gen_base64url(31);
-        return sql_str(format!("$2b${:02}${}{}", rounds, salt, hash));
-    }
-
-    // ── IP address ───────────────────────────────────────────────────────────
+    // ========== 6. IP 地址 ==========
     if n == "ip"
         || n.ends_with("_ip")
         || n.contains("_ip_")
@@ -390,52 +416,119 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         || n == "operator_ip"
         || n == "reporter_ip"
     {
-        let mut rng = rand::thread_rng();
-        return sql_str(format!(
-            "{}.{}.{}.{}",
-            rng.gen_range(1_u8..=254),
-            rng.gen_range(0_u8..=255),
-            rng.gen_range(0_u8..=255),
-            rng.gen_range(1_u8..=254),
-        ));
+        return sql_str(random_ip());
     }
 
-    // ── slug / code / identifier ─────────────────────────────────────────────
-    if contains_any(&n, &["slug", "code"]) {
-        let len = rand::thread_rng().gen_range(4..=12).min(max_len);
-        return sql_str(gen_slug(len));
+    // ========== 7. Slug / Code / Identifier ==========
+    if contains_any(&n, &["slug", "code", "identifier", "ident"]) {
+        let slug = random_slug();
+        let trimmed = if slug.len() > max_len {
+            &slug[..max_len]
+        } else {
+            &slug
+        };
+        return sql_str(trimmed.to_string());
     }
 
-    // ── version string ───────────────────────────────────────────────────────
+    // ========== 8. 版本号 ==========
     if n == "version" || n.ends_with("_version") {
-        let mut rng = rand::thread_rng();
-        return sql_str(format!(
-            "{}.{}.{}",
-            rng.gen_range(0..=5),
-            rng.gen_range(0..=20),
-            rng.gen_range(0..=99)
-        ));
+        return sql_str(random_version());
     }
 
-    // ── color / colour ───────────────────────────────────────────────────────
+    // ========== 9. 颜色 ==========
     if n == "color" || n == "colour" || n.ends_with("_color") || n.ends_with("_colour") {
-        let mut rng = rand::thread_rng();
-        return sql_str(format!("#{:06X}", rng.gen_range(0_u32..=0xFF_FF_FF)));
+        return sql_str(random_color());
     }
 
-    // ── user-agent string ────────────────────────────────────────────────────
+    // ========== 10. User-Agent ==========
     if contains_any(&n, &["user_agent", "useragent", "agent"]) {
+        return sql_str(random_user_agent());
+    }
+
+    // ========== 11. 地址（国家/省/市/街道） ==========
+    if contains_any(
+        &n,
+        &[
+            "address", "addr", "location", "street", "city", "state", "country",
+        ],
+    ) {
+        return sql_str(random_address());
+    }
+
+    // ========== 12. 公司 / 组织 ==========
+    if contains_any(&n, &["company", "organization", "org", "corp", "firm"]) {
+        return sql_str(random_company());
+    }
+
+    // ========== 13. 职位 / 角色 ==========
+    if contains_any(&n, &["job", "position", "title", "role", "occupation"]) {
+        return sql_str(random_job());
+    }
+
+    // ========== 14. 银行卡号 ==========
+    if contains_any(
+        &n,
+        &["bank_card", "credit_card", "card_number", "payment_method"],
+    ) {
+        return sql_str(random_bank_card());
+    }
+
+    // ========== 15. 文件相关字段 ==========
+    if n == "file_id" || n == "stored_name" {
+        return sql_str(random_alphanum(16));
+    }
+    if n == "original_name" {
+        return sql_str(format!("{}.{}", random_alphanum(8), random_extension()));
+    }
+    if n == "stored_path" {
         return sql_str(format!(
-            "Mozilla/5.0 (compatible; dbmock/{})",
-            gen_alphanum(4)
+            "/uploads/{}/{}",
+            random_alphanum(6),
+            random_alphanum(12)
         ));
     }
-
-    if contains_any(&n, &["name", "username", "login"]) {
-        return sql_str(unique_username());
+    if n == "file_type" {
+        return sql_str(
+            random_mime_type()
+                .split('/')
+                .next()
+                .unwrap_or("application")
+                .to_string(),
+        );
+    }
+    if n == "mime_type" {
+        return sql_str(random_mime_type());
+    }
+    if n == "mime_major" {
+        return sql_str(
+            random_mime_type()
+                .split('/')
+                .next()
+                .unwrap_or("application")
+                .to_string(),
+        );
+    }
+    if n == "ext" || n == "extension" {
+        return sql_str(random_extension());
+    }
+    if n == "file_hash" {
+        return sql_str(random_file_hash());
     }
 
-    // ── long prose: description / content / body / bio / summary / note ──────
+    // ========== 16. 令牌 / JTI ==========
+    if n == "token" || n == "refresh_token" {
+        return sql_str(random_token());
+    }
+    if n == "jti" {
+        return sql_str(random_jti());
+    }
+
+    // ========== 17. Cron 表达式 ==========
+    if n == "cron_expr" {
+        return sql_str(random_cron_expr());
+    }
+
+    // ========== 18. 长文本（描述 / 内容 / 正文 / 备注 / 快照等） ==========
     if contains_any(
         &n,
         &[
@@ -452,22 +545,33 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
             "about",
             "before",
             "after",
+            "comment",
+            "review",
+            "feedback",
+            "content_snapshot",
+            "event_detail",
+            "error_msg",
+            "script_code",
+            "reason",
+            "appeal_reason",
+            "appeal_result",
+            "review_note",
+            "handle_note",
+            "reason",
+            "config_schema",
+            "config_values",
         ],
     ) {
-        let word_count = rand::thread_rng().gen_range(8..=25_usize);
-        let words: Vec<String> = (0..word_count)
-            .map(|_| gen_word(rand::thread_rng().gen_range(3..=9)))
-            .collect();
-        let s = words.join(" ");
-        let s = if s.len() > max_len {
-            s[..max_len].to_string()
+        let article = random_article();
+        let trimmed = if article.len() > max_len {
+            &article[..max_len]
         } else {
-            s
+            &article
         };
-        return sql_str(s);
+        return sql_str(trimmed.to_string());
     }
 
-    // ── short label: title / subject / name / username / label / tag / role ──
+    // ========== 19. 短标签（标题 / 主题 / 类型 / 状态 / 动作等） ==========
     if contains_any(
         &n,
         &[
@@ -478,37 +582,357 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
             "label",
             "tag",
             "category",
-            "role",
-            "reason",
-            "action",
             "type",
             "status",
             "state",
+            "reason",
+            "action",
             "target_type",
             "trigger_type",
             "event_type",
             "timeline_type",
             "ptype",
+            "kind",
+            "sort",
+            "role",
+            "moderation_status",
+            "post_status",
+            "punish_type",
+            "appeal_status",
+            "source",
+            "violation_type",
+            "value",
         ],
     ) || matches!(n.as_str(), "v0" | "v1" | "v2" | "v3" | "v4" | "v5")
     {
-        let word_count = rand::thread_rng().gen_range(1..=2_usize);
-        let words: Vec<String> = (0..word_count)
-            .map(|_| gen_capitalized_word(rand::thread_rng().gen_range(3..=8)))
-            .collect();
-        let s = words.join(" ");
-        let s = if s.len() > max_len {
-            s[..max_len].to_string()
+        let short = random_article_title(); // 通常 1-2 句话
+        let trimmed = if short.len() > max_len {
+            &short[..max_len]
         } else {
-            s
+            &short
         };
-        return sql_str(s);
+        return sql_str(trimmed.to_string());
+    }
+    // ========== 电商专用字段 ==========
+    // 商品名称 / 产品标题
+    if contains_any(
+        &n,
+        &["product_name", "product_title", "item_name", "goods_name"],
+    ) {
+        let name = random_product_name();
+        let trimmed = if name.len() > max_len {
+            &name[..max_len]
+        } else {
+            &name
+        };
+        return sql_str(trimmed.to_string());
+    }
+    // SKU / 商品编码
+    if contains_any(&n, &["sku", "product_sku", "item_sku", "goods_id"]) {
+        let sku = random_sku();
+        let trimmed = if sku.len() > max_len {
+            &sku[..max_len]
+        } else {
+            &sku
+        };
+        return sql_str(trimmed.to_string());
+    }
+    // 品牌
+    if contains_any(&n, &["brand", "brand_name", "manufacturer"]) {
+        return sql_str(random_brand());
+    }
+    // 订单状态
+    if contains_any(&n, &["order_status", "order_state", "delivery_status"]) {
+        return sql_str(random_order_status());
+    }
+    // 支付方式
+    if contains_any(&n, &["payment_method", "payment_type", "pay_type"]) {
+        return sql_str(random_payment_method());
+    }
+    // 物流单号 / 快递单号
+    if contains_any(&n, &["tracking_number", "tracking_no", "shipment_number"]) {
+        return sql_str(random_tracking_number());
+    }
+    // 优惠券码 / 折扣码
+    if contains_any(&n, &["coupon_code", "promo_code", "discount_code"]) {
+        return sql_str(random_coupon_code());
+    }
+    // 收货地址（整体）
+    if contains_any(
+        &n,
+        &["shipping_address", "delivery_address", "billing_address"],
+    ) {
+        // 复用随机地址生成器（已有 random_address）
+        return sql_str(random_address());
+    }
+    // 商品描述 / 产品详情（长文本）
+    if contains_any(&n, &["product_description", "specification", "details"]) {
+        let article = random_article();
+        let trimmed = if article.len() > max_len {
+            &article[..max_len]
+        } else {
+            &article
+        };
+        return sql_str(trimmed.to_string());
+    }
+    // 商品标签（可能是 JSON，但如果是纯文本则用随机标签）
+    if contains_any(&n, &["product_tags", "tags"]) && !col.data_type.to_lowercase().contains("json")
+    {
+        let tags = vec![random_article_title(), random_article_title()].join(",");
+        let trimmed = if tags.len() > max_len {
+            &tags[..max_len]
+        } else {
+            &tags
+        };
+        return sql_str(trimmed.to_string());
     }
 
-    // ── token / jti / file_id / stored_name / stored_path / script_url etc. ─
-    // These are opaque identifiers — use random alphanum of appropriate length.
+    // ========== 社区专用字段 ==========
+    // 帖子类型
+    if contains_any(&n, &["post_type", "topic_type"]) {
+        return sql_str(random_post_type());
+    }
+    // 帖子状态
+    if contains_any(&n, &["post_status", "status"])
+        && !contains_any(&n, &["order_status", "payment_status"])
+    {
+        return sql_str(random_post_status());
+    }
+    // 审核状态
+    if contains_any(&n, &["moderation_status", "review_status", "audit_status"]) {
+        return sql_str(random_moderation_status());
+    }
+    // 举报类型
+    if contains_any(&n, &["report_type", "violation_type"]) {
+        // 如果列是整数类型，返回数字字符串（由 TypeKind::Integer 处理），这里只处理文本
+        if col.data_type.to_lowercase().contains("varchar")
+            || col.data_type.to_lowercase().contains("text")
+        {
+            return sql_str(random_report_type());
+        }
+    }
+    // 操作行为
+    if n == "action" || n.ends_with("_action") {
+        return sql_str(random_action());
+    }
+    // 目标类型
+    if contains_any(&n, &["target_type", "object_type"]) {
+        return sql_str(random_target_type());
+    }
+    // 角色
+    if n == "role" {
+        return sql_str(random_role());
+    }
+    // 通知类型
+    if contains_any(&n, &["notification_type", "notify_type"]) {
+        return sql_str(random_notification_type());
+    }
+    // 用户签名 / 简介（短文本）
+    if contains_any(&n, &["signature", "personal_note"]) {
+        let short = random_article_title(); // 1-2 句话
+        let trimmed = if short.len() > max_len {
+            &short[..max_len]
+        } else {
+            &short
+        };
+        return sql_str(trimmed.to_string());
+    }
+    // 用户个人主页（URL）
+    if n == "profile_url" || n == "user_url" {
+        return sql_str(random_url());
+    }
+    // 群组/圈子名称
+    if contains_any(&n, &["group_name", "team_name", "circle_name"]) {
+        let name = random_company(); // 复用公司名生成器
+        let trimmed = if name.len() > max_len {
+            &name[..max_len]
+        } else {
+            &name
+        };
+        return sql_str(trimmed.to_string());
+    }
+    // 群组描述（长文本）
+    if contains_any(&n, &["group_description", "group_bio"]) {
+        let desc = random_article();
+        let trimmed = if desc.len() > max_len {
+            &desc[..max_len]
+        } else {
+            &desc
+        };
+        return sql_str(trimmed.to_string());
+    }
+
+    // ========== 教育专用字段 ==========
+    // 课程名称 / 课程标题
+    if contains_any(&n, &["course_name", "course_title", "class_name"]) {
+        let name = random_course_name();
+        let trimmed = if name.len() > max_len {
+            &name[..max_len]
+        } else {
+            &name
+        };
+        return sql_str(trimmed.to_string());
+    }
+    // 学科 / 科目
+    if contains_any(&n, &["subject", "discipline", "major"]) {
+        let subj = random_subject();
+        let trimmed = if subj.len() > max_len {
+            &subj[..max_len]
+        } else {
+            &subj
+        };
+        return sql_str(trimmed.to_string());
+    }
+    // 难度等级
+    if contains_any(&n, &["difficulty", "level", "grade_level"]) {
+        return sql_str(random_difficulty());
+    }
+    // 课程类型
+    if contains_any(&n, &["course_type", "class_type"]) {
+        return sql_str(random_course_type());
+    }
+    // 问题类型（考试/测验）
+    if contains_any(&n, &["question_type", "quiz_type"]) {
+        return sql_str(random_question_type());
+    }
+    // 成绩等级（字母）
+    if contains_any(&n, &["grade_letter", "score_letter"]) {
+        return sql_str(random_grade_letter());
+    }
+    // 证书编号
+    if contains_any(&n, &["certificate_number", "cert_no", "diploma_no"]) {
+        let cert = random_certificate_number();
+        let trimmed = if cert.len() > max_len {
+            &cert[..max_len]
+        } else {
+            &cert
+        };
+        return sql_str(trimmed.to_string());
+    }
+    // 作业状态 / 提交状态
+    if contains_any(&n, &["assignment_status", "submission_status"]) {
+        return sql_str(random_assignment_status());
+    }
+    // 课程描述 / 教学目标（长文本）
+    if contains_any(
+        &n,
+        &["course_description", "syllabus", "learning_objectives"],
+    ) {
+        let desc = random_article();
+        let trimmed = if desc.len() > max_len {
+            &desc[..max_len]
+        } else {
+            &desc
+        };
+        return sql_str(trimmed.to_string());
+    }
+    // 课程封面（URL）
+    if n == "course_cover" || n == "thumbnail_url" {
+        return sql_str(random_image_url());
+    }
+    // 教师简介 / 讲师介绍（短文本）
+    if contains_any(&n, &["instructor_bio", "teacher_intro"]) {
+        let bio = random_article_title();
+        let trimmed = if bio.len() > max_len {
+            &bio[..max_len]
+        } else {
+            &bio
+        };
+        return sql_str(trimmed.to_string());
+    }
+    // 学生反馈 / 评价（长文本）
+    if contains_any(&n, &["student_feedback", "review_comment"]) {
+        let feedback = random_article();
+        let trimmed = if feedback.len() > max_len {
+            &feedback[..max_len]
+        } else {
+            &feedback
+        };
+        return sql_str(trimmed.to_string());
+    }
+
+    // ========== 开发/技术专用字段 ==========
+    // 编程语言
+    if contains_any(&n, &["language", "lang", "programming_language"]) {
+        return sql_str(random_programming_language());
+    }
+    // 框架
+    if contains_any(&n, &["framework", "library", "sdk", "toolchain"]) {
+        return sql_str(random_framework()); // 也可用 random_library 细粒度控制
+    }
+    // API 路径
+    if contains_any(&n, &["api_path", "endpoint", "route", "url_path", "path"]) {
+        return sql_str(random_api_path());
+    }
+    // HTTP 方法
+    if contains_any(&n, &["http_method", "method", "request_method"]) {
+        return sql_str(random_http_method());
+    }
+    // 环境
+    if contains_any(&n, &["environment", "env", "deploy_env"]) {
+        return sql_str(random_environment());
+    }
+    // 配置键
+    if contains_any(&n, &["config_key", "setting_key", "property_key"]) {
+        return sql_str(random_config_key());
+    }
+    // Git 相关
+    if contains_any(&n, &["commit_hash", "git_hash", "revision", "short_sha"]) {
+        return sql_str(random_commit_hash());
+    }
+    if contains_any(&n, &["branch", "git_branch"]) {
+        return sql_str(random_branch_name());
+    }
+    if contains_any(&n, &["tag", "git_tag", "release_tag"]) {
+        return sql_str(random_tag_name());
+    }
+    // 日志级别
+    if contains_any(&n, &["log_level", "level", "severity"]) {
+        return sql_str(random_log_level());
+    }
+    // 错误类型
+    if contains_any(&n, &["error_type", "exception_type", "failure_type"]) {
+        return sql_str(random_error_type());
+    }
+    // 任务状态（后台任务、CI/CD）
+    if contains_any(
+        &n,
+        &[
+            "task_status",
+            "job_status",
+            "build_status",
+            "pipeline_status",
+        ],
+    ) {
+        return sql_str(random_task_status());
+    }
+    // Docker / 容器
+    if contains_any(&n, &["docker_tag", "image_tag"]) {
+        return sql_str(random_docker_tag());
+    }
+    if contains_any(&n, &["container_name", "pod_name", "instance_name"]) {
+        return sql_str(random_container_name());
+    }
+    // 数据库 URL
+    if contains_any(&n, &["database_url", "db_url", "connection_string", "dsn"]) {
+        return sql_str(random_database_url());
+    }
+    // 端口（作为字符串存储）
+    if n == "port" || n.ends_with("_port") {
+        return sql_str(random_port_string());
+    }
+    // 许可证
+    if contains_any(&n, &["license", "license_type", "spdx_id"]) {
+        return sql_str(random_license());
+    }
+    // 版本号（已有 random_version，但此处可再确认）
+    if n == "version" || n.ends_with("_version") {
+        return sql_str(random_version());
+    }
+
+    // ========== 20. 默认：随机字母数字字符串 ==========
     let len = rand::thread_rng().gen_range(8..=max_len.min(64)).max(1);
-    sql_str(gen_alphanum(len))
+    sql_str(random_alphanum(len))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

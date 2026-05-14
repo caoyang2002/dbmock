@@ -39,6 +39,7 @@
 //!   constant         — always emit the literal `value` string as-is
 
 use std::collections::HashSet;
+use std::str;
 use std::sync::{Arc, Mutex};
 
 use rand::Rng;

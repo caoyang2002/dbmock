@@ -10,10 +10,11 @@
 //!   • RETURNING is used only to seed the FK pool for downstream tables, and
 //!     only on the *first* chunk (we stop collecting once the pool is full).
 //!   • The progress bar is updated per-row so the user sees live throughput.
-
+use std::cmp::max;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::logger::print_sample_table;
 use async_trait::async_trait;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use tokio::sync::Semaphore;
@@ -27,6 +28,8 @@ use crate::errors::{MockerError, Result};
 use crate::fieldconfig::generate::reset_unique_counters;
 use crate::fieldconfig::infer::MockConfig;
 use crate::generator::batch::build_insert_batches;
+use crate::generator::batch::generate_sample_rows;
+use crate::generator::batch::UniqueConstraintTracker;
 use crate::generator::dependency::topological_sort;
 
 // ── tuning constants ──────────────────────────────────────────────────────────
@@ -127,13 +130,16 @@ impl DataGenerator for MockEngine {
 
         // ── per-table loop ────────────────────────────────────────────────────
         for table_name in &sorted {
+            let ts = schema.get_table(table_name).unwrap();
+            let constraint_tracker = if !ts.unique_constraints.is_empty() {
+                Some(UniqueConstraintTracker::new(&ts.unique_constraints))
+            } else {
+                None
+            };
             let row_count = *row_counts.get(table_name).unwrap_or(&0);
             if row_count == 0 {
                 continue;
             }
-
-            let ts = schema.get_table(table_name).unwrap();
-
             let self_ref_cols: Vec<String> = ts
                 .foreign_keys
                 .iter()
@@ -158,10 +164,34 @@ impl DataGenerator for MockEngine {
                     &self_ref_cols,
                     table_cfg,
                     self.insert_rows,
+                    constraint_tracker.as_ref(),
                 );
                 for s in &stmts {
-                    println!("{};", s);
                     report.sql_statements.push(s.clone());
+                }
+                let sample_size = row_count.min(20);
+                let sample_rows = generate_sample_rows(
+                    ts,
+                    sample_size,
+                    &db_type,
+                    &fk_pools,
+                    &self_ref_cols,
+                    table_cfg,
+                );
+                if !sample_rows.is_empty() {
+                    let headers: Vec<String> = ts
+                        .columns
+                        .iter()
+                        .filter(|c| !c.is_auto_increment)
+                        .map(|c| c.name.clone())
+                        .collect();
+                    println!(
+                        "\n📊 Sample data for table '{}' ({} rows):",
+                        table_name, sample_size
+                    );
+                    print_sample_table(&sample_rows, &headers);
+                } else {
+                    println!("No columns to display for table '{}'", table_name);
                 }
                 fk_pools.insert(
                     table_name.clone(),
@@ -183,6 +213,7 @@ impl DataGenerator for MockEngine {
                 let src2 = self_ref_cols.clone();
                 let tc2 = table_cfg.cloned();
                 let insert_rows = self.insert_rows;
+                let tracker = constraint_tracker;
                 tokio::task::spawn_blocking(move || {
                     build_insert_batches(
                         &ts2,
@@ -192,6 +223,7 @@ impl DataGenerator for MockEngine {
                         &src2,
                         tc2.as_ref(),
                         insert_rows,
+                        tracker.as_ref(),
                     )
                 })
                 .await
