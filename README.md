@@ -3,7 +3,7 @@
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-**dbmock** 是一个高性能、可扩展的数据库 Mock 数据生成工具。它能自动识别数据库表结构（schema），并基于外键依赖关系，自动生成符合数据类型和业务约束的随机测试数据。
+**dbmock** 是一个数据库 Mock 数据生成工具。它能自动识别数据库表结构（schema），并基于外键依赖关系，自动生成符合数据类型和业务约束的随机测试数据。
 
 ## 必要说明
 
@@ -202,7 +202,90 @@ make init
 | `--db-pass`        | 密码                                   | 空            |
 | `-d, --db-url`| 连接字符串                             | 无            |
 
-## 四、项目结构
+### `config` - 生成配置文件
+
+
+## 四、配置文件
+
+默认生成的配置文件为 `mock_config.yml`
+
+该文件控制每个字段（列）如何生成模拟数据。你可以修改任意字段的 `type:` 来改变其生成策略。
+
+### 🔧 可用的生成类型（type）
+
+| 类型 | 说明 | 示例 / 参数 |
+|------|------|-------------|
+| **default** | 自动根据数据库模式推断（保持默认即可） | 无参数 |
+| **skip**    | 在 INSERT 语句中排除该列 | 无参数 |
+| **null**    | 始终输出 NULL | 无参数 |
+| **constant** | 固定值，在 `constant:` 中指定 | `constant: "固定内容"` |
+| **uuid**    | UUID v4 格式的字符串 | 无参数 |
+| **unique**  | 本次运行内唯一的值（带自增后缀） | 无参数 |
+| **int**     | 随机整数 | `min:` `max:` |
+| **float**   | 随机浮点数 | `min:` `max:` |
+| **decimal** | 固定精度的十进制数 | `min:` `max:` `scale:` |
+| **sequence**| 从 1 开始单调递增的整数 | 无参数 |
+| **bool**    | true / false | 无参数 |
+| **string**  | 随机字母数字字符串 | `min_len:` `max_len:` |
+| **text**    | 随机散文段落 | `max_len:` |
+| **label**   | 短标签（1-2 个单词，首字母大写） | 无参数 |
+| **slug**    | 小写连字符分隔的 slug | 无参数 |
+| **enum**    | 从给定列表中随机选择 | `values: [a, b, c]` |
+| **email**   | `user@domain.tld` 格式 | 无参数 |
+| **url**     | `https://www.domain.tld/path` 格式 | 无参数 |
+| **ip**      | IPv4 地址 | 无参数 |
+| **semver**  | `major.minor.patch` 语义化版本 | 无参数 |
+| **password**| bcrypt 风格的哈希值 | 无参数 |
+| **phone**   | 国际电话格式（如 `+CC subscriber`） | 无参数 |
+| **color**   | CSS 十六进制颜色 `#RRGGBB` | 无参数 |
+| **user_agent** | 浏览器 User-Agent 字符串 | 无参数 |
+| **timestamp_tz** | 带时区的时间戳 | `date_from:` `date_to:` |
+| **timestamp**    | 不带时区的时间戳 | `date_from:` `date_to:` |
+| **date**         | 日期 `YYYY-MM-DD` | `date_from:` `date_to:` |
+| **time**         | 时间 `HH:MM:SS` | 无参数 |
+| **json**         | 随机 JSON 对象 | 无参数 |
+
+---
+
+### ⚙️ 可选参数（根据所选类型使用）
+
+| 参数名 | 用途 | 适用类型 |
+|--------|------|----------|
+| `values` | 枚举列表 | `enum` |
+| `min` | 最小值 | `int`, `float`, `decimal` |
+| `max` | 最大值 | `int`, `float`, `decimal` |
+| `scale` | 小数位数 | `decimal` |
+| `min_len` | 最小长度 | `string` |
+| `max_len` | 最大长度 | `string`, `text` |
+| `date_from` | 起始日期 | `timestamp_tz`, `timestamp`, `date` |
+| `date_to` | 结束日期 | `timestamp_tz`, `timestamp`, `date` |
+| `null_rate` | NULL 概率（0.0–1.0） | 任意类型（覆盖默认） |
+| `constant` | 固定值 | `constant` |
+
+---
+
+### 📝 示例
+
+```yaml
+# 某一列的配置
+columns:
+  - name: user_id
+    type: int
+    min: 1
+    max: 100000
+  - name: status
+    type: enum
+    values: ["active", "inactive", "banned"]
+  - name: created_at
+    type: timestamp_tz
+    date_from: "2020-01-01"
+    date_to: "2025-12-31"
+  - name: description
+    type: text
+    max_len: 500
+```
+
+## 五、项目结构
 
 ```
 dbmock/
@@ -217,8 +300,6 @@ dbmock/
 │   └── errors/         # 统一错误处理
 └── Cargo.toml
 ```
-
-## 五、项目说明
 
 ### 1. 顶层入口
 
