@@ -370,11 +370,9 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         return sql_str(random_image_url());
     }
     if n == "icon" || n.ends_with("_icon") || n == "icon_url" {
-        return sql_str(random_avatar_url()); // 重用头像生成器
+        return sql_str(random_avatar_url());
     }
     if n == "screenshots" && col.data_type.to_lowercase().contains("json") {
-        // JSON 数组，由 TypeKind::Json 处理，此处不干涉
-        // 但如果是纯文本存储的 URL 列表，可自定义
         return sql_str(format!("[\"{}\"]", random_image_url()));
     }
 
@@ -459,8 +457,9 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         return sql_str(random_company());
     }
 
-    // ========== 13. 职位 / 角色 ==========
-    if contains_any(&n, &["job", "position", "title", "role", "occupation"]) {
+    // ========== 13. 职位 ==========
+    // 注意：去掉 "role"（由社区专用块处理），去掉 "title"（由短标签块处理）
+    if contains_any(&n, &["job", "position", "occupation"]) {
         return sql_str(random_job());
     }
 
@@ -527,7 +526,7 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         return sql_str(random_cron_expr());
     }
 
-    // ========== 18. 长文本（描述 / 内容 / 正文 / 备注 / 快照等） ==========
+    // ========== 18. 长文本（描述 / 内容 / 正文 / 备注等） ==========
     if contains_any(
         &n,
         &[
@@ -551,12 +550,11 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
             "event_detail",
             "error_msg",
             "script_code",
-            "reason",
+            "reason", // 只保留一次
             "appeal_reason",
             "appeal_result",
             "review_note",
             "handle_note",
-            "reason",
             "config_schema",
             "config_values",
         ],
@@ -571,40 +569,10 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
     }
 
     // ========== 19. 短标签（标题 / 主题 / 类型 / 状态 / 动作等） ==========
-    if contains_any(
-        &n,
-        &[
-            "title",
-            "subject",
-            "headline",
-            "caption",
-            "label",
-            "tag",
-            "category",
-            "type",
-            "status",
-            "state",
-            "reason",
-            "action",
-            "target_type",
-            "trigger_type",
-            "event_type",
-            "timeline_type",
-            "ptype",
-            "kind",
-            "sort",
-            "role",
-            "moderation_status",
-            "post_status",
-            "punish_type",
-            "appeal_status",
-            "source",
-            "violation_type",
-            "value",
-        ],
-    ) || matches!(n.as_str(), "v0" | "v1" | "v2" | "v3" | "v4" | "v5")
+    if contains_any(&n, &["title", "headline", "caption", "label", "category"])
+        || matches!(n.as_str(), "v0" | "v1" | "v2" | "v3" | "v4" | "v5")
     {
-        let short = random_article_title(); // 通常 1-2 句话
+        let short = random_article_title();
         let trimmed = if short.len() > max_len {
             &short[..max_len]
         } else {
@@ -612,8 +580,9 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
+    // 去掉已在专用块处理的: "role", "subject", "tag", "level", "value"
+
     // ========== 电商专用字段 ==========
-    // 商品名称 / 产品标题
     if contains_any(
         &n,
         &["product_name", "product_title", "item_name", "goods_name"],
@@ -626,7 +595,6 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
-    // SKU / 商品编码
     if contains_any(&n, &["sku", "product_sku", "item_sku", "goods_id"]) {
         let sku = random_sku();
         let trimmed = if sku.len() > max_len {
@@ -636,35 +604,27 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
-    // 品牌
     if contains_any(&n, &["brand", "brand_name", "manufacturer"]) {
         return sql_str(random_brand());
     }
-    // 订单状态
     if contains_any(&n, &["order_status", "order_state", "delivery_status"]) {
         return sql_str(random_order_status());
     }
-    // 支付方式
     if contains_any(&n, &["payment_method", "payment_type", "pay_type"]) {
         return sql_str(random_payment_method());
     }
-    // 物流单号 / 快递单号
     if contains_any(&n, &["tracking_number", "tracking_no", "shipment_number"]) {
         return sql_str(random_tracking_number());
     }
-    // 优惠券码 / 折扣码
     if contains_any(&n, &["coupon_code", "promo_code", "discount_code"]) {
         return sql_str(random_coupon_code());
     }
-    // 收货地址（整体）
     if contains_any(
         &n,
         &["shipping_address", "delivery_address", "billing_address"],
     ) {
-        // 复用随机地址生成器（已有 random_address）
         return sql_str(random_address());
     }
-    // 商品描述 / 产品详情（长文本）
     if contains_any(&n, &["product_description", "specification", "details"]) {
         let article = random_article();
         let trimmed = if article.len() > max_len {
@@ -674,7 +634,6 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
-    // 商品标签（可能是 JSON，但如果是纯文本则用随机标签）
     if contains_any(&n, &["product_tags", "tags"]) && !col.data_type.to_lowercase().contains("json")
     {
         let tags = vec![random_article_title(), random_article_title()].join(",");
@@ -687,48 +646,55 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
     }
 
     // ========== 社区专用字段 ==========
-    // 帖子类型
     if contains_any(&n, &["post_type", "topic_type"]) {
         return sql_str(random_post_type());
     }
-    // 帖子状态
     if contains_any(&n, &["post_status", "status"])
-        && !contains_any(&n, &["order_status", "payment_status"])
+        && !contains_any(
+            &n,
+            &[
+                "order_status",
+                "payment_status",
+                "task_status",
+                "job_status",
+                "build_status",
+                "pipeline_status",
+                "moderation_status",
+                "review_status",
+                "audit_status",
+                "assignment_status",
+                "submission_status",
+                "delivery_status",
+            ],
+        )
     {
         return sql_str(random_post_status());
     }
-    // 审核状态
     if contains_any(&n, &["moderation_status", "review_status", "audit_status"]) {
         return sql_str(random_moderation_status());
     }
-    // 举报类型
     if contains_any(&n, &["report_type", "violation_type"]) {
-        // 如果列是整数类型，返回数字字符串（由 TypeKind::Integer 处理），这里只处理文本
         if col.data_type.to_lowercase().contains("varchar")
             || col.data_type.to_lowercase().contains("text")
         {
             return sql_str(random_report_type());
         }
     }
-    // 操作行为
     if n == "action" || n.ends_with("_action") {
         return sql_str(random_action());
     }
-    // 目标类型
     if contains_any(&n, &["target_type", "object_type"]) {
         return sql_str(random_target_type());
     }
-    // 角色
+    // "role" 统一在此处理（原第 13 节和此处合并）
     if n == "role" {
         return sql_str(random_role());
     }
-    // 通知类型
     if contains_any(&n, &["notification_type", "notify_type"]) {
         return sql_str(random_notification_type());
     }
-    // 用户签名 / 简介（短文本）
     if contains_any(&n, &["signature", "personal_note"]) {
-        let short = random_article_title(); // 1-2 句话
+        let short = random_article_title();
         let trimmed = if short.len() > max_len {
             &short[..max_len]
         } else {
@@ -736,13 +702,11 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
-    // 用户个人主页（URL）
     if n == "profile_url" || n == "user_url" {
         return sql_str(random_url());
     }
-    // 群组/圈子名称
     if contains_any(&n, &["group_name", "team_name", "circle_name"]) {
-        let name = random_company(); // 复用公司名生成器
+        let name = random_company();
         let trimmed = if name.len() > max_len {
             &name[..max_len]
         } else {
@@ -750,7 +714,6 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
-    // 群组描述（长文本）
     if contains_any(&n, &["group_description", "group_bio"]) {
         let desc = random_article();
         let trimmed = if desc.len() > max_len {
@@ -762,7 +725,6 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
     }
 
     // ========== 教育专用字段 ==========
-    // 课程名称 / 课程标题
     if contains_any(&n, &["course_name", "course_title", "class_name"]) {
         let name = random_course_name();
         let trimmed = if name.len() > max_len {
@@ -772,7 +734,7 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
-    // 学科 / 科目
+    // "subject" 统一在此处理（从第 19 节移出）
     if contains_any(&n, &["subject", "discipline", "major"]) {
         let subj = random_subject();
         let trimmed = if subj.len() > max_len {
@@ -782,23 +744,19 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
-    // 难度等级
-    if contains_any(&n, &["difficulty", "level", "grade_level"]) {
+    // "level" / "difficulty" 统一在此处理（从第 19 节移出）
+    if contains_any(&n, &["difficulty", "grade_level"]) || n == "level" {
         return sql_str(random_difficulty());
     }
-    // 课程类型
     if contains_any(&n, &["course_type", "class_type"]) {
         return sql_str(random_course_type());
     }
-    // 问题类型（考试/测验）
     if contains_any(&n, &["question_type", "quiz_type"]) {
         return sql_str(random_question_type());
     }
-    // 成绩等级（字母）
     if contains_any(&n, &["grade_letter", "score_letter"]) {
         return sql_str(random_grade_letter());
     }
-    // 证书编号
     if contains_any(&n, &["certificate_number", "cert_no", "diploma_no"]) {
         let cert = random_certificate_number();
         let trimmed = if cert.len() > max_len {
@@ -808,11 +766,9 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
-    // 作业状态 / 提交状态
     if contains_any(&n, &["assignment_status", "submission_status"]) {
         return sql_str(random_assignment_status());
     }
-    // 课程描述 / 教学目标（长文本）
     if contains_any(
         &n,
         &["course_description", "syllabus", "learning_objectives"],
@@ -825,11 +781,9 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
-    // 课程封面（URL）
     if n == "course_cover" || n == "thumbnail_url" {
         return sql_str(random_image_url());
     }
-    // 教师简介 / 讲师介绍（短文本）
     if contains_any(&n, &["instructor_bio", "teacher_intro"]) {
         let bio = random_article_title();
         let trimmed = if bio.len() > max_len {
@@ -839,7 +793,6 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
         };
         return sql_str(trimmed.to_string());
     }
-    // 学生反馈 / 评价（长文本）
     if contains_any(&n, &["student_feedback", "review_comment"]) {
         let feedback = random_article();
         let trimmed = if feedback.len() > max_len {
@@ -851,49 +804,41 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
     }
 
     // ========== 开发/技术专用字段 ==========
-    // 编程语言
     if contains_any(&n, &["language", "lang", "programming_language"]) {
         return sql_str(random_programming_language());
     }
-    // 框架
     if contains_any(&n, &["framework", "library", "sdk", "toolchain"]) {
-        return sql_str(random_framework()); // 也可用 random_library 细粒度控制
+        return sql_str(random_framework());
     }
-    // API 路径
     if contains_any(&n, &["api_path", "endpoint", "route", "url_path", "path"]) {
         return sql_str(random_api_path());
     }
-    // HTTP 方法
     if contains_any(&n, &["http_method", "method", "request_method"]) {
         return sql_str(random_http_method());
     }
-    // 环境
     if contains_any(&n, &["environment", "env", "deploy_env"]) {
         return sql_str(random_environment());
     }
-    // 配置键
     if contains_any(&n, &["config_key", "setting_key", "property_key"]) {
         return sql_str(random_config_key());
     }
-    // Git 相关
     if contains_any(&n, &["commit_hash", "git_hash", "revision", "short_sha"]) {
         return sql_str(random_commit_hash());
     }
     if contains_any(&n, &["branch", "git_branch"]) {
         return sql_str(random_branch_name());
     }
-    if contains_any(&n, &["tag", "git_tag", "release_tag"]) {
+    // "tag" 统一在此处理（从第 19 节移出），精确匹配避免误伤 "product_tags"
+    if contains_any(&n, &["git_tag", "release_tag"]) || n == "tag" {
         return sql_str(random_tag_name());
     }
-    // 日志级别
-    if contains_any(&n, &["log_level", "level", "severity"]) {
+    // "log_level" / "severity" 统一在此处理（"level" 已由教育块处理，此处用精确词）
+    if contains_any(&n, &["log_level", "severity"]) {
         return sql_str(random_log_level());
     }
-    // 错误类型
     if contains_any(&n, &["error_type", "exception_type", "failure_type"]) {
         return sql_str(random_error_type());
     }
-    // 任务状态（后台任务、CI/CD）
     if contains_any(
         &n,
         &[
@@ -905,38 +850,28 @@ fn gen_text_for_col(col: &ColumnSchema, max_len: usize) -> String {
     ) {
         return sql_str(random_task_status());
     }
-    // Docker / 容器
     if contains_any(&n, &["docker_tag", "image_tag"]) {
         return sql_str(random_docker_tag());
     }
     if contains_any(&n, &["container_name", "pod_name", "instance_name"]) {
         return sql_str(random_container_name());
     }
-    // 数据库 URL
-    if contains_any(&n, &["db_url", "db_url", "connection_string", "dsn"]) {
+    if contains_any(&n, &["db_url", "connection_string", "dsn"]) {
         return sql_str(random_db_url());
     }
-    // 端口（作为字符串存储）
     if n == "port" || n.ends_with("_port") {
         return sql_str(random_port_string());
     }
-    // 许可证
     if contains_any(&n, &["license", "license_type", "spdx_id"]) {
         return sql_str(random_license());
-    }
-    // 版本号（已有 random_version，但此处可再确认）
-    if n == "version" || n.ends_with("_version") {
-        return sql_str(random_version());
     }
 
     // ========== 20. 默认：随机字母数字字符串 ==========
     let len = rand::thread_rng().gen_range(8..=max_len.min(64)).max(1);
     sql_str(random_alphanum(len))
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Primitive generators — purely algorithmic, no embedded data
-// ─────────────────────────────────────────────────────────────────────────────
+} // ─────────────────────────────────────────────────────────────────────────────
+  // Primitive generators — purely algorithmic, no embedded data
+  // ─────────────────────────────────────────────────────────────────────────────
 
 /// PostgreSQL BOOLEAN literal.
 fn gen_bool() -> String {
