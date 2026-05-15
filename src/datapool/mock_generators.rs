@@ -752,7 +752,7 @@ pub fn random_container_name() -> String {
 }
 
 /// 随机数据库连接字符串（模拟）
-pub fn random_database_url() -> String {
+pub fn random_db_url() -> String {
     let mut rng = rand::thread_rng();
     let db_type = match rng.gen_range(0..4) {
         0 => "postgresql",

@@ -9,7 +9,7 @@ pub struct DatabaseConfig {
     pub database: String,
     pub username: String,
     pub password: String,
-    pub database_url: Option<String>,
+    pub db_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -45,7 +45,7 @@ impl std::str::FromStr for DbType {
 
 impl DatabaseConfig {
     pub fn connection_string(&self) -> String {
-        if let Some(url) = &self.database_url {
+        if let Some(url) = &self.db_url {
             return url.clone();
         }
         match self.db_type {
@@ -71,7 +71,7 @@ impl Default for DatabaseConfig {
             database: String::new(),
             username: String::new(),
             password: String::new(),
-            database_url: None,
+            db_url: None,
         }
     }
 }

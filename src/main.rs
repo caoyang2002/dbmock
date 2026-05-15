@@ -57,7 +57,7 @@ async fn handle_extract(args: cli::ExtractArgs) -> Result<()> {
         &args.db_name,
         &args.db_user,
         &args.db_pass,
-        args.database_url.as_deref(),
+        args.db_url.as_deref(),
     )?;
 
     println!("🔌  Connecting to {} database...", cfg.db_type);
@@ -278,7 +278,7 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
         &args.db_name,
         &args.db_user,
         &args.db_pass,
-        args.database_url.as_deref(),
+        args.db_url.as_deref(),
     )?;
 
     println!("🔌  Connecting to {} database...", db_cfg.db_type);
@@ -451,9 +451,9 @@ fn build_db_config(
     pass: &str,
     url: Option<&str>,
 ) -> Result<DatabaseConfig> {
-    let database_url = url
+    let db_url = url
         .map(|s| s.to_string())
-        .or_else(|| std::env::var("DATABASE_URL").ok());
+        .or_else(|| std::env::var("DB_URL").ok());
 
     let parsed_type: DbType = db_type
         .parse()
@@ -472,6 +472,6 @@ fn build_db_config(
         database: db_name.to_string(),
         username: user.to_string(),
         password: pass.to_string(),
-        database_url,
+        db_url,
     })
 }

@@ -1,4 +1,4 @@
-.PHONY: help db-json env run
+.PHONY: help build log test clear test-db init gen env run
 
 BIN :=  ./target/release/dbmock
 # 如果 .env 比 env.mk 新，则重新生成 env.mk
@@ -16,14 +16,7 @@ export
 env:
 	@echo "DB_HOST=$$DB_HOST"
 	@echo "DB_PORT=$$DB_PORT"
-run: $(BIN)
-	$(BIN)
-db-json:
-	@echo "开始提取数据库结构..."
-
-db-sql:
-	@echo "开始提取数据库结构..."
-	$(BIN) extract -s schema.sql
+	@echo "DB_URL=$$DB_URL"
 
 build:
 	@echo "构建..."
@@ -35,29 +28,30 @@ log:
 
 test:
 	@echo "测试..."
-	@$(BIN)
+	@$(BIN) --version
 clear:
 	@rm -f schema.json
 	@rm -f schema.sql
 	@rm -f env.mk
 	@rm -f mock_config.yml
+	@rm -f ./target
 
 # 测试数据库连接及所有表的权限
 test-db:
 	@echo "Testing connection to database..."
-	@psql "$(DATABASE_URL)" -c "SELECT 1" > /dev/null 2>&1 && \
+	@psql "$(DB_URL)" -c "SELECT 1" > /dev/null 2>&1 && \
 		echo "✅ Database connection successful" || \
 		(echo "❌ Failed to connect to database" && exit 1)
 	@echo "Checking tables and permissions..."
-	@psql "$(DATABASE_URL)" -t -A -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';" > /tmp/tables_$$.txt 2>/dev/null; \
+	@psql "$(DB_URL)" -t -A -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';" > /tmp/tables_$$.txt 2>/dev/null; \
 	if [ ! -s /tmp/tables_$$.txt ]; then \
-		echo "⚠️  No tables found in public schema. Please run: psql '$(DATABASE_URL)' -f schema.sql"; \
+		echo "⚠️  No tables found in public schema. Please run: psql '$(DB_URL)' -f schema.sql"; \
 		rm -f /tmp/tables_$$.txt; \
 		exit 1; \
 	fi; \
 	FAILED=0; \
 	while read -r tbl; do \
-		if psql "$(DATABASE_URL)" -c "SELECT 1 FROM \"$$tbl\" LIMIT 1" > /dev/null 2>&1; then \
+		if psql "$(DB_URL)" -c "SELECT 1 FROM \"$$tbl\" LIMIT 1" > /dev/null 2>&1; then \
 			echo "  ✅ Read permission on table: $$tbl"; \
 		else \
 			echo "  ❌ No read permission on table: $$tbl (or table empty)"; \
@@ -67,12 +61,12 @@ test-db:
 	rm -f /tmp/tables_$$.txt; \
 	if [ $$FAILED -ne 0 ]; then exit 1; fi
 	@echo "Checking sequence permissions..."
-	@psql "$(DATABASE_URL)" -t -A -c "SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'public';" > /tmp/seqs_$$.txt 2>/dev/null; \
+	@psql "$(DB_URL)" -t -A -c "SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'public';" > /tmp/seqs_$$.txt 2>/dev/null; \
 	if [ -s /tmp/seqs_$$.txt ]; then \
 		while read -r seq; do \
-			if psql "$(DATABASE_URL)" -c "SELECT nextval('\"$$seq\"')" > /dev/null 2>&1; then \
+			if psql "$(DB_URL)" -c "SELECT nextval('\"$$seq\"')" > /dev/null 2>&1; then \
 				echo "  ✅ USAGE permission on sequence: $$seq"; \
-				psql "$(DATABASE_URL)" -c "SELECT setval('\"$$seq\"', last_value) FROM \"$$seq\"" > /dev/null 2>&1; \
+				psql "$(DB_URL)" -c "SELECT setval('\"$$seq\"', last_value) FROM \"$$seq\"" > /dev/null 2>&1; \
 			else \
 				echo "  ❌ No USAGE permission on sequence: $$seq"; \
 				exit 1; \
@@ -85,19 +79,54 @@ test-db:
 	@echo "All permission checks passed."
 
 init: test-db
-	@$(BIN) extract --database-url "$(DATABASE_URL)"
+	@$(BIN) extract --db-url "$(DB_URL)"
 	@$(BIN) config --force
 gen:
-	# @$(BIN) generate --database-url "$(DATABASE_URL)"
+	@$(BIN) generate --db-url "$(DB_URL)"
+run: build init gen
+	@echo "✅ 完成：构建、初始化、生成数据"
 
 
+# 默认性能测试行数（可通过 make perf ROWS=500000 覆盖）
+PERF_ROWS ?= 100000
 
+## 运行性能测试：生成指定行数的用户数据并输出耗时与速率
+perf:
+	@echo "🚀 性能测试：生成 $(PERF_ROWS) 行用户数据"
+	@echo "开始时间: $$(date '+%Y-%m-%d %H:%M:%S')"
+	@START=$$(date +%s); \
+	$(BIN) generate --db-url "$(DB_URL)" --rows users=$(PERF_ROWS); \
+	EXIT_CODE=$$?; \
+	END=$$(date +%s); \
+	ELAPSED=$$((END - START)); \
+	if [ $$EXIT_CODE -eq 0 ]; then \
+		echo "✅ 完成 - 耗时: $$ELAPSED 秒"; \
+		if [ $$ELAPSED -gt 0 ]; then \
+			RATE=$$(echo "$(PERF_ROWS) / $$ELAPSED" | bc); \
+			echo "📊 吞吐率: $$RATE 行/秒"; \
+		fi; \
+	else \
+		echo "❌ 性能测试失败"; \
+		exit $$EXIT_CODE; \
+	fi
 
 help:
-	@echo "Available targets:"
-	@echo " extract: 提取数据库结构"
-	@echo " 	db-json: 提取数据库结构为 json 文件"
-	@echo " 	db-sql: 提取数据库结构为 sql 文件"
-	@echo " 	db-config: 生成数据库结构的配置文件"
-	@echo " generate: 生成 mock 数据"
-	@echo " 	db-json: 生成 mock 数据"
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@echo "  build       构建 release 版本并复制到 ./dbmock"
+	@echo "  log         以 DEBUG 日志级别运行 extract 并记录 SQL 日志"
+	@echo "  test        测试 dbmock 版本"
+	@echo "  clear       清除生成的文件 (schema.json, schema.sql, env.mk, mock_config.yml, ./target)"
+	@echo "  test-db     测试数据库连接、表权限和序列权限"
+	@echo "  init        提取数据库 schema 并生成 mock 配置 (依赖 test-db)"
+	@echo "  gen         生成模拟数据 (需要先运行 init)"
+	@echo "  env         显示当前加载的环境变量 (DB_HOST, DB_PORT, DB_URL)"
+	@echo "  run         依次执行 build, init, gen"
+	@echo ""
+	@echo "环境变量 (从 .env 文件加载):"
+	@echo "  DB_HOST, DB_PORT, DB_URL"
+	@echo ""
+	@echo "示例:"
+	@echo "  make init       # 提取 schema 并生成配置"
+	@echo "  make gen        # 生成测试数据"

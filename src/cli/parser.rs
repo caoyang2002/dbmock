@@ -74,7 +74,7 @@ pub struct ExtractArgs {
 
     /// Full connection URL — overrides the individual parameters above
     #[arg(short = 'd', long)]
-    pub database_url: Option<String>,
+    pub db_url: Option<String>,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -159,7 +159,7 @@ pub struct GenerateArgs {
 
     /// Full connection URL
     #[arg(short = 'd', long)]
-    pub database_url: Option<String>,
+    pub db_url: Option<String>,
 
     /// Debug
     #[arg(long, global = true)]
