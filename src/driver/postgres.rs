@@ -269,38 +269,59 @@ impl PostgresDriver {
         }
         Ok(fks)
     }
-
+    // 唯一约束和索引
     async fn fetch_unique_constraints(&self, table: &str) -> Result<Vec<Vec<String>>> {
         use std::collections::HashMap;
 
         let rows = sqlx::query(
             r#"
+            -- 显式 UNIQUE 约束
             SELECT
                 kcu.constraint_name,
                 kcu.column_name,
-                kcu.ordinal_position
+                kcu.ordinal_position::bigint AS ordinal_position
             FROM information_schema.table_constraints tc
             JOIN information_schema.key_column_usage kcu
                 ON tc.constraint_name = kcu.constraint_name
-                AND tc.table_schema   = kcu.table_schema
+                AND tc.table_schema = kcu.table_schema
             WHERE tc.constraint_type = 'UNIQUE'
               AND tc.table_schema = 'public'
-              AND tc.table_name   = $1
-            ORDER BY constraint_name, ordinal_position
+              AND tc.table_name = $1
+
+            UNION ALL
+
+            -- 唯一索引（排除已被显式约束覆盖的，并且排除主键索引）
+            SELECT
+                i.relname AS constraint_name,
+                a.attname AS column_name,
+                u.ord::bigint AS ordinal_position
+            FROM pg_index idx
+            JOIN pg_class i ON i.oid = idx.indexrelid
+            JOIN pg_class t ON t.oid = idx.indrelid
+            CROSS JOIN LATERAL unnest(idx.indkey) WITH ORDINALITY AS u(attnum, ord)
+            JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = u.attnum
+            WHERE t.relname = $1
+              AND t.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+              AND idx.indisunique = true
+              AND NOT EXISTS (
+                  SELECT 1 FROM information_schema.table_constraints tc
+                  WHERE tc.constraint_name = i.relname
+                    AND tc.constraint_type = 'UNIQUE'
+              )
+              -- 排除主键索引（主键索引名称通常包含 _pkey）
+              AND i.relname NOT LIKE '%_pkey'
             "#,
         )
         .bind(table)
         .fetch_all(&self.pool)
         .await?;
 
-        let mut map: HashMap<String, Vec<(String, i32)>> = HashMap::new();
+        let mut map: HashMap<String, Vec<(String, i64)>> = HashMap::new();
         for row in rows {
-            let constraint_name: String = row.get(0);
-            let column_name: String = row.get(1);
-            let ordinal_position: i32 = row.get(2);
-            map.entry(constraint_name)
-                .or_default()
-                .push((column_name, ordinal_position));
+            let name: String = row.get(0);
+            let col: String = row.get(1);
+            let pos: i64 = row.get(2);
+            map.entry(name).or_default().push((col, pos));
         }
 
         let mut result = Vec::new();
@@ -310,4 +331,5 @@ impl PostgresDriver {
         }
         Ok(result)
     }
+    //
 }

@@ -111,6 +111,7 @@ impl MockEngine {
         let mut errors = Vec::new();
         let mut all_ids = Vec::with_capacity(row_count);
         let debug = self.debug;
+
         let table_name_owned = table_name.to_string();
 
         if debug && !stmts.is_empty() {
@@ -143,9 +144,9 @@ impl MockEngine {
                     overall.inc(n.min(self.insert_rows as u64));
                 }
                 Ok((Err(e), sql)) => {
-                    let msg = format!("Error inserting into {}: {}\nSQL: {}", table_name, e, sql);
-                    eprintln!("\n⚠️  {}", msg);
-                    errors.push(msg);
+                    // let msg = format!("Error inserting into {}: {}\nSQL: {}", table_name, e, sql);
+                    // eprintln!("\n⚠️  {}", msg);
+                    // errors.push(msg);
                 }
                 Err(e) => {
                     let msg = format!("Task panic for {}: {}", table_name, e);

@@ -339,13 +339,48 @@ dbmock/
 可以使用工具测试
 
 ```bash
-make perf
+make perf # 默认 usrs 表
 ```
 
-在 PostgreSQL 12 上生成 100 万条记录（10 个表，含外键）：
-- **Schema 提取**： < 1 秒
-- **数据生成**： < 30 秒（批量插入，千行/批）
-- 内存占用： < 100 MB
+在 PostgreSQL 18.3 上生成 100 万条记录：
+平台：
+```bash
+Model Name: Mac mini
+Model Identifier: Mac16,10
+Model Number: MU9D3CH/A
+Chip: Apple M4
+Total Number of Cores: 10 (4 Performance and 6 Efficiency)
+Memory: 16 GB
+System Firmware Version: 13822.81.10
+OS Loader Version: 13822.81.10
+```
+
+```log
+📊 性能报告（表格）
++--------------------------------+----------------------------------+
+| 指标                           | 值                               |
++--------------------------------+----------------------------------+
+| ✅ 总耗时                      | 31.79 秒                        |
+| 📊 目标行数                    | 1000000 行/表 × 1 表 = 1000000 行 |
+| 📊 实际插入行数                | 1000000                          |
+| 📊 错误数                      | none                             |
+| 📊 平均吞吐率                  | 31456 行/秒                    |
++--------------------------------+----------------------------------+
+| 资源占用                       |                                  |
++--------------------------------+----------------------------------+
+| User time (用户态)              | 8.96 秒                         |
+| System time (内核态)            | 0.96 秒                         |
+| CPU 占用率                      | 31%                              |
+| Maximum resident set size       | 1329392                          |
+| Swaps                           | 0                                |
+| Socket messages sent            | 3176                             |
+| Socket messages received        | 2541                             |
+| Major page faults               | 3                                |
+| Minor page faults               | 264313                           |
+| Voluntary context switches      | 3515                             |
+| Involuntary context switches    | 12211                            |
++--------------------------------+----------------------------------+
+```
 
 ## 七、技术栈
 

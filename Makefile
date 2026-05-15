@@ -85,8 +85,8 @@ gen:
 run: build init gen
 	@echo "✅ 完成：构建、初始化、生成数据"
 
-
-PERF_ROWS ?= 100000
+# 默认 100 万
+PERF_ROWS ?= 1000000
 
 ## 运行性能测试：生成指定行数的用户数据并输出耗时与速率
 perf:

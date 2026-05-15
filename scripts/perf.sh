@@ -48,10 +48,10 @@ TMP_OUT=$(mktemp)
 
 # 执行测试并捕获输出
 if [ -n "$TIME_ARGS" ]; then
-    $TIME_CMD $TIME_ARGS "$BIN" generate --db-url "$DB_URL" --count "$PERF_ROWS" 2>&1 | tee "$TMP_OUT"
+    $TIME_CMD $TIME_ARGS "$BIN" generate --db-url "$DB_URL" --rows users="$PERF_ROWS" 2>&1 | tee "$TMP_OUT"
     EXIT_CODE=${PIPESTATUS[0]}
 else
-    (time "$BIN" generate --db-url "$DB_URL" --count "$PERF_ROWS") 2>&1 | tee "$TMP_OUT"
+    (time "$BIN" generate --db-url "$DB_URL" --rows users="$PERF_ROWS") 2>&1 | tee "$TMP_OUT"
     EXIT_CODE=${PIPESTATUS[0]}
 fi
 

@@ -11,6 +11,7 @@
 //!   5. FieldConfig override     → generate_with_config()
 //!   6. Fallback                 → schema-driven generate_value()
 
+use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -146,13 +147,12 @@ pub fn build_insert_batches(
     table_config: Option<&TableFieldConfig>,
     insert_rows: usize,
     constraint_tracker: Option<&UniqueConstraintTracker>,
-    debug: bool,
+    _debug: bool,
 ) -> Vec<String> {
     if row_count == 0 || insert_rows == 0 {
         return vec![];
     }
 
-    // ── build the ordered, filtered column list ───────────────────────────────
     let cols: Vec<&ColumnSchema> = table
         .columns
         .iter()
@@ -183,17 +183,42 @@ pub fn build_insert_batches(
         .join(", ");
     let col_names: Vec<String> = cols.iter().map(|c| c.name.clone()).collect();
 
-    // ── pre-compute per-column strategy ─────────────────────────────
     let strategies: Vec<ColStrategy> = cols
         .iter()
         .map(|col| resolve_strategy(col, table, fk_id_pools, self_ref_cols, table_config))
         .collect();
 
-    // ── generate rows ─────────────────────────────────────────────────────────
+    // 为所有单列唯一约束构建顺序分配器（包括外键列和非外键列）
+    let mut sequential_allocators: HashMap<String, (Vec<String>, usize)> = HashMap::new();
+    for constraint in &table.unique_constraints {
+        if constraint.len() != 1 {
+            continue; // 多列唯一约束仍使用 tracker + 重试
+        }
+        let col_name = &constraint[0];
+        // 尝试作为外键处理
+        let mut is_fk = false;
+        if let Some(fk) = table.foreign_keys.iter().find(|fk| fk.column == *col_name) {
+            if let Some(pool) = fk_id_pools.get(&fk.referenced_table) {
+                if !pool.is_empty() {
+                    let mut shuffled = pool.clone();
+                    shuffled.shuffle(&mut rand::thread_rng());
+                    sequential_allocators.insert(col_name.clone(), (shuffled, 0));
+                    is_fk = true;
+                }
+            }
+        }
+        if !is_fk {
+            // 非外键唯一列：生成 1..=row_count 并打乱
+            let mut values: Vec<String> = (1..=row_count).map(|i| i.to_string()).collect();
+            values.shuffle(&mut rand::thread_rng());
+            sequential_allocators.insert(col_name.clone(), (values, 0));
+        }
+    }
+
     let n_stmts = row_count.div_ceil(insert_rows);
-    let mut statements: Vec<String> = Vec::with_capacity(n_stmts);
-    let mut batch: Vec<String> = Vec::with_capacity(insert_rows);
-    let mut values_buf: Vec<String> = Vec::with_capacity(cols.len());
+    let mut statements = Vec::with_capacity(n_stmts);
+    let mut batch = Vec::with_capacity(insert_rows);
+    let mut values_buf = Vec::with_capacity(cols.len());
 
     const MAX_RETRIES: usize = 100;
 
@@ -201,25 +226,47 @@ pub fn build_insert_batches(
         let mut retries = 0;
         let final_values = loop {
             values_buf.clear();
-            // 生成所有列的值
+            // 临时存储本次尝试的顺序分配值（不更新索引）
+            let mut temp_alloc_values = Vec::new();
             for (strat, col) in strategies.iter().zip(cols.iter()) {
-                let val = apply_strategy(strat, col, db_type);
-                values_buf.push(val);
+                if let Some((pool, idx)) = sequential_allocators.get_mut(&col.name) {
+                    let v = pool[*idx % pool.len()].clone();
+                    temp_alloc_values.push(v.clone());
+                    values_buf.push(v);
+                } else {
+                    let v = apply_strategy(strat, col, db_type);
+                    values_buf.push(v);
+                }
             }
 
-            if let Some(tracker) = constraint_tracker {
-                let ok = tracker.check_and_insert(&values_buf, &col_names);
-                if ok {
-                    break values_buf.clone();
-                } else {
-                    retries += 1;
-                    if retries >= MAX_RETRIES {
-                        break values_buf.clone();
-                    }
-                    continue;
-                }
+            // 唯一性检查
+            let ok = if let Some(tracker) = constraint_tracker {
+                tracker.check_and_insert(&values_buf, &col_names)
             } else {
+                true
+            };
+
+            if ok {
+                // 成功：更新顺序分配器的索引
+                for (strat, col) in strategies.iter().zip(cols.iter()) {
+                    if let Some((_pool, idx)) = sequential_allocators.get_mut(&col.name) {
+                        *idx += 1;
+                    }
+                }
                 break values_buf.clone();
+            } else {
+                retries += 1;
+                if retries >= MAX_RETRIES {
+                    // 放弃，仍然更新索引避免死循环
+                    for (strat, col) in strategies.iter().zip(cols.iter()) {
+                        if let Some((_pool, idx)) = sequential_allocators.get_mut(&col.name) {
+                            *idx += 1;
+                        }
+                    }
+                    break values_buf.clone();
+                }
+                // 重试：不更新分配器索引，继续循环
+                continue;
             }
         };
 
