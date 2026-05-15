@@ -21,21 +21,14 @@
 
 为了确保安全，暂不支持清空数据库，请自行操作，例如清空 tiny_forum 数据库：
 
-#### 方法一：清空表
+#### 方法一：清空表（保留表结构）
 
 ```sql
 \c tiny_forum
-DO $$
-DECLARE
-    r RECORD;
-BEGIN
-    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-        EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE;';
-    END LOOP;
-END $$;
+SELECT 'TRUNCATE TABLE ' || quote_ident(tablename) || ' CASCADE;' FROM pg_tables WHERE schemaname = 'public' \gexec
 ```
 
-#### 方法二：删除并重建（数据结构丢失）
+#### 方法二：删除并重建（表结构丢失）
 
 ```sql
 \c postgres
