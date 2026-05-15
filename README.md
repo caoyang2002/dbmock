@@ -24,6 +24,7 @@
 #### 方法一：清空表
 
 ```sql
+\c tiny_forum
 DO $$
 DECLARE
     r RECORD;
@@ -37,7 +38,7 @@ END $$;
 #### 方法二：删除并重建（数据结构丢失）
 
 ```sql
-\c Postgres
+\c postgres
 DROP DATABASE IF EXISTS tiny_forum; CREATE DATABASE tiny_forum;
 ```
 
