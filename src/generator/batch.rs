@@ -146,6 +146,7 @@ pub fn build_insert_batches(
     table_config: Option<&TableFieldConfig>,
     insert_rows: usize,
     constraint_tracker: Option<&UniqueConstraintTracker>,
+    debug: bool,
 ) -> Vec<String> {
     if row_count == 0 || insert_rows == 0 {
         return vec![];

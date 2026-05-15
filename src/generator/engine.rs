@@ -10,27 +10,25 @@
 //!   • RETURNING is used only to seed the FK pool for downstream tables, and
 //!     only on the *first* chunk (we stop collecting once the pool is full).
 //!   • The progress bar is updated per-row so the user sees live throughput.
-use std::cmp::max;
-use std::collections::HashMap;
-use std::sync::Arc;
-
-use crate::logger::print_sample_table;
-use async_trait::async_trait;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use tokio::sync::Semaphore;
-
-use crate::config::tuning;
 use crate::config::TuningParams;
 use crate::core::driver::DatabaseDriver;
 use crate::core::generator::{DataGenerator, GenerationReport};
 use crate::core::schema::Schema;
+use crate::core::schema::TableSchema;
 use crate::errors::{MockerError, Result};
 use crate::fieldconfig::generate::reset_unique_counters;
 use crate::fieldconfig::infer::MockConfig;
-use crate::generator::batch::build_insert_batches;
+use crate::fieldconfig::FieldConfig;
 use crate::generator::batch::generate_sample_rows;
-use crate::generator::batch::UniqueConstraintTracker;
+use crate::generator::batch::{build_insert_batches, UniqueConstraintTracker};
 use crate::generator::dependency::topological_sort;
+use crate::logger::print_sample_table;
+use async_trait::async_trait;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use rand::Rng;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
+use tokio::sync::Semaphore;
 
 // ── tuning constants ──────────────────────────────────────────────────────────
 
@@ -67,6 +65,125 @@ impl MockEngine {
     }
     pub fn set_debug(&mut self, enabled: bool) {
         self.debug = enabled;
+    }
+    /// 专门处理自引用表的插入（两阶段）
+    /// 专用于自引用表的两阶段插入
+    /// 第一阶段：生成 INSERT，自引用列填 NULL，并执行插入（收集所有返回的主键）
+    /// 第二阶段：根据主键列表，为每行随机分配一个已存在的父行（索引更小），然后执行 UPDATE
+
+    async fn insert_self_referential_table(
+        &self,
+        ts: &TableSchema,
+        row_count: usize,
+        db_type: &str,
+        table_cfg: Option<&BTreeMap<String, FieldConfig>>,
+        constraint_tracker: Option<&UniqueConstraintTracker>,
+        fk_pools: &mut HashMap<String, Vec<String>>,
+        bar: &ProgressBar,
+        overall: &ProgressBar,
+    ) -> Result<(u64, Vec<String>, Vec<String>)> {
+        let table_name = &ts.name;
+        let pk_col = ts.primary_keys.first().unwrap_or(&"id".to_string()).clone();
+        let self_fk_col = ts
+            .foreign_keys
+            .iter()
+            .find(|fk| fk.referenced_table == *table_name)
+            .map(|fk| fk.column.clone())
+            .ok_or_else(|| MockerError::TableNotFound {
+                table: table_name.clone(),
+            })?;
+
+        // 生成 INSERT 语句（自引用列 = NULL）
+        let stmts = build_insert_batches(
+            ts,
+            row_count,
+            db_type,
+            fk_pools,
+            &[self_fk_col.clone()],
+            table_cfg,
+            self.insert_rows,
+            constraint_tracker,
+            self.debug,
+        );
+
+        let sem = Arc::new(Semaphore::new(self.concurrency));
+        let mut inserted = 0u64;
+        let mut errors = Vec::new();
+        let mut all_ids = Vec::with_capacity(row_count);
+        let debug = self.debug;
+        let table_name_owned = table_name.to_string();
+
+        if debug && !stmts.is_empty() {
+            eprintln!("[DEBUG] First INSERT SQL for {}:\n{}", table_name, stmts[0]);
+        }
+
+        let mut handles = Vec::new();
+        for sql in stmts {
+            let permit = sem.clone().acquire_owned().await.unwrap();
+            let driver = self.driver.clone();
+            let pk = pk_col.clone();
+            // let debug_task = debug;
+            // let table_name_task = table_name_owned.clone();
+            handles.push(tokio::spawn(async move {
+                let result = driver
+                    .execute_batch_returning_ids(vec![sql.clone()], "", &pk)
+                    .await
+                    .map(|ids| (ids.len() as u64, ids));
+                drop(permit);
+                (result, sql) // 返回 SQL 用于错误日志
+            }));
+        }
+
+        for handle in handles {
+            match handle.await {
+                Ok((Ok((n, ids)), sql)) => {
+                    inserted += n;
+                    all_ids.extend(ids);
+                    bar.inc(n.min(self.insert_rows as u64));
+                    overall.inc(n.min(self.insert_rows as u64));
+                }
+                Ok((Err(e), sql)) => {
+                    let msg = format!("Error inserting into {}: {}\nSQL: {}", table_name, e, sql);
+                    eprintln!("\n⚠️  {}", msg);
+                    errors.push(msg);
+                }
+                Err(e) => {
+                    let msg = format!("Task panic for {}: {}", table_name, e);
+                    errors.push(msg);
+                }
+            }
+        }
+
+        if inserted == 0 {
+            return Ok((0, vec![], errors));
+        }
+
+        if all_ids.len() < row_count {
+            if let Ok(ids) = self.driver.query_ids(table_name, &pk_col, row_count).await {
+                all_ids = ids;
+            } else {
+                all_ids = synthetic_pool(row_count, row_count);
+            }
+        }
+
+        // 第二阶段：UPDATE 自引用外键
+        use rand::SeedableRng;
+        let mut rng = rand::rngs::StdRng::from_entropy();
+        for idx in 1..all_ids.len() {
+            let pk_val = &all_ids[idx];
+            let parent_idx = rng.gen_range(0..idx);
+            let parent_pk = &all_ids[parent_idx];
+            let sql = format!(
+                "UPDATE {} SET {} = '{}' WHERE {} = '{}'",
+                table_name, self_fk_col, parent_pk, pk_col, pk_val
+            );
+            if let Err(e) = self.driver.execute_batch(vec![sql]).await {
+                let msg = format!("Error updating {} {}: {}", table_name, pk_val, e);
+                errors.push(msg);
+            }
+        }
+
+        Ok((inserted, all_ids, errors))
     }
 }
 
@@ -171,11 +288,6 @@ impl DataGenerator for MockEngine {
         // ── per-table loop ────────────────────────────────────────────────────
         for table_name in &sorted {
             let ts = schema.get_table(table_name).unwrap();
-            let constraint_tracker = if !ts.unique_constraints.is_empty() {
-                Some(UniqueConstraintTracker::new(&ts.unique_constraints))
-            } else {
-                None
-            };
             let row_count = *row_counts.get(table_name).unwrap_or(&0);
             if row_count == 0 {
                 if self.debug {
@@ -183,51 +295,47 @@ impl DataGenerator for MockEngine {
                 }
                 continue;
             }
+
+            // 判断是否自引用
             let self_ref_cols: Vec<String> = ts
                 .foreign_keys
                 .iter()
                 .filter(|fk| fk.referenced_table == *table_name)
                 .map(|fk| fk.column.clone())
                 .collect();
+            let has_self_ref = !self_ref_cols.is_empty();
 
-            let table_cfg = mock_config.and_then(|mc| mc.get(table_name));
-            let pk_col = pk_col_name(schema, table_name);
-
-            if self.debug {
-                eprintln!(
-                    "[DEBUG] Processing table: '{}', rows={}",
-                    table_name, row_count
-                );
-                eprintln!("[DEBUG]   self_ref_cols = {:?}", self_ref_cols);
-                eprintln!("[DEBUG]   foreign_keys = {:?}", ts.foreign_keys);
-                eprintln!("[DEBUG]   unique_constraints = {:?}", ts.unique_constraints);
-                eprintln!(
-                    "[DEBUG]   fk_pools currently contain keys: {:?}",
-                    fk_pools.keys().collect::<Vec<_>>()
-                );
-            }
-
+            // 创建进度条
             let bar = mp.add(ProgressBar::new(row_count as u64));
             bar.set_style(bar_style.clone());
             bar.set_message(table_name.clone());
 
+            // ── 预览模式 ───────────────────────────────────────────────────────
             if preview {
                 if self.debug {
                     eprintln!("[DEBUG] Preview mode for '{}'", table_name);
                 }
+                let constraint_tracker = if !ts.unique_constraints.is_empty() {
+                    Some(UniqueConstraintTracker::new(&ts.unique_constraints))
+                } else {
+                    None
+                };
+                // 生成 SQL 语句（自引用列会填 NULL）
                 let stmts = build_insert_batches(
                     ts,
                     row_count,
                     &db_type,
                     &fk_pools,
                     &self_ref_cols,
-                    table_cfg,
+                    mock_config.and_then(|mc| mc.get(table_name)),
                     self.insert_rows,
                     constraint_tracker.as_ref(),
+                    self.debug,
                 );
                 for s in &stmts {
                     report.sql_statements.push(s.clone());
                 }
+                // 生成样本数据
                 let sample_size = row_count.min(20);
                 let sample_rows = generate_sample_rows(
                     ts,
@@ -235,7 +343,7 @@ impl DataGenerator for MockEngine {
                     &db_type,
                     &fk_pools,
                     &self_ref_cols,
-                    table_cfg,
+                    mock_config.and_then(|mc| mc.get(table_name)),
                 );
                 if !sample_rows.is_empty() {
                     let headers: Vec<String> = ts
@@ -252,6 +360,7 @@ impl DataGenerator for MockEngine {
                 } else {
                     println!("No columns to display for table '{}'", table_name);
                 }
+                // 预览模式也把合成主键加入池中，使下游预览能拿到外键值
                 fk_pools.insert(
                     table_name.clone(),
                     synthetic_pool(row_count, self.fk_pool_cap),
@@ -262,78 +371,83 @@ impl DataGenerator for MockEngine {
                 continue;
             }
 
-            // ── real insert: concurrent chunks ────────────────────────────────
+            // ── 真实插入 ───────────────────────────────────────────────────────
+            let constraint_tracker = if !ts.unique_constraints.is_empty() {
+                Some(UniqueConstraintTracker::new(&ts.unique_constraints))
+            } else {
+                None
+            };
+
+            let table_cfg = mock_config.and_then(|mc| mc.get(table_name));
+            let pk_col = pk_col_name(schema, table_name);
+            let need_ids = !fk_pools.contains_key(table_name);
+
+            if has_self_ref {
+                // 自引用表：两阶段插入（第一阶段填 NULL，第二阶段 UPDATE）
+                let (inserted, collected_ids, errors) = self
+                    .insert_self_referential_table(
+                        ts,
+                        row_count,
+                        &db_type,
+                        table_cfg,
+                        constraint_tracker.as_ref(),
+                        &mut fk_pools,
+                        &bar,
+                        &overall,
+                    )
+                    .await?;
+
+                report.total_rows_inserted += inserted;
+                report.errors.extend(errors);
+                report.tables_processed += 1;
+
+                // 将收集到的 ID 放入 fk_pools
+                if !collected_ids.is_empty() {
+                    fk_pools.insert(table_name.clone(), collected_ids);
+                } else if inserted > 0 {
+                    fk_pools.insert(
+                        table_name.clone(),
+                        synthetic_pool(inserted as usize, self.fk_pool_cap),
+                    );
+                }
+                bar.finish_with_message(format!("{} ✓ {} rows", table_name, inserted));
+                continue;
+            }
+
+            // ── 普通表（无自引用）：原有并发批量插入逻辑 ────────────────────────
             if self.debug {
                 eprintln!("[DEBUG] Real insert mode for '{}'", table_name);
-                eprintln!("[DEBUG]   Starting build_insert_batches (direct call)...");
             }
+
             let stmts = build_insert_batches(
                 ts,
                 row_count,
                 &db_type,
                 &fk_pools,
-                &self_ref_cols,
+                &self_ref_cols, // 这里为空
                 table_cfg,
                 self.insert_rows,
                 constraint_tracker.as_ref(),
+                self.debug,
             );
-            if self.debug {
-                eprintln!(
-                    "[DEBUG] build_insert_batches returned {} statements",
-                    stmts.len()
-                );
-            }
+
             let n_stmts = stmts.len();
-            let rows_total = row_count as u64;
-            if self.debug {
-                eprintln!(
-                    "[DEBUG]   build_insert_batches returned {} statements",
-                    n_stmts
-                );
-            }
+            let mut inserted = 0u64;
+            let mut errors = Vec::new();
+            let mut collected_ids = Vec::with_capacity(self.fk_pool_cap.min(row_count));
 
-            // We collect IDs only from the first FK_POOL_CAP rows so we can
-            // seed downstream tables — after that we discard RETURNING results.
-            let need_ids = !fk_pools.contains_key(table_name);
-            if self.debug {
-                eprintln!("[DEBUG]   need_ids for '{}' = {}", table_name, need_ids);
-                if need_ids && !self_ref_cols.is_empty() {
-                    eprintln!("[DEBUG]   Table has self-ref columns but no existing pool; will attempt to collect IDs from RETURNING");
-                }
-            }
-            let mut collected_ids: Vec<String> =
-                Vec::with_capacity(self.fk_pool_cap.min(row_count));
-            let mut inserted: u64 = 0;
-            let mut errors: Vec<String> = Vec::new();
-
-            // Semaphore limits in-flight concurrent INSERT tasks.
             let sem = Arc::new(Semaphore::new(self.concurrency));
             let mut handles = Vec::with_capacity(n_stmts);
 
-            for (i, sql) in stmts.into_iter().enumerate() {
+            for sql in stmts {
                 let permit = sem.clone().acquire_owned().await.unwrap();
                 let driver = self.driver.clone();
-                let pk2 = pk_col.clone();
+                let pk = pk_col.clone();
                 let want_ids = need_ids && collected_ids.len() < self.fk_pool_cap;
-                let rows_in_batch = sql
-                    .bytes()
-                    .filter(|&b| b == b'(')
-                    .count()
-                    .saturating_sub(1) // leading INSERT (...) also has a (
-                    .max(1) as u64;
-                // We'll just use INSERT_ROWS as the expected count per batch.
-                let expected_rows = self.insert_rows as u64;
-
-                if self.debug && i == 0 {
-                    eprintln!(
-                        "[DEBUG]   Spawning first task (sql preview: {} chars)",
-                        sql.len()
-                    );
-                }
                 handles.push(tokio::spawn(async move {
                     let result = if want_ids {
                         driver
-                            .execute_batch_returning_ids(vec![sql], "", &pk2)
+                            .execute_batch_returning_ids(vec![sql], "", &pk)
                             .await
                             .map(|ids| (ids.len() as u64, ids))
                     } else {
@@ -344,14 +458,6 @@ impl DataGenerator for MockEngine {
                 }));
             }
 
-            if self.debug {
-                eprintln!(
-                    "[DEBUG]   Spawned {} tasks, waiting for results...",
-                    handles.len()
-                );
-            }
-
-            // Collect results as tasks complete
             for handle in handles {
                 match handle.await {
                     Ok(Ok((n, ids))) => {
@@ -376,72 +482,31 @@ impl DataGenerator for MockEngine {
                 }
             }
 
-            if self.debug {
-                eprintln!(
-                    "[DEBUG]   Finished tasks for '{}', inserted {} rows, collected {} ids",
-                    table_name,
-                    inserted,
-                    collected_ids.len()
-                );
-            }
-
             report.total_rows_inserted += inserted;
             report.errors.extend(errors);
             report.tables_processed += 1;
 
-            // Seed FK pool for downstream tables
+            // 将主键池提供给下游表
             if collected_ids.is_empty() && need_ids {
-                if self.debug {
-                    eprintln!(
-                        "[DEBUG]   No IDs collected via RETURNING; trying query_ids fallback..."
-                    );
-                }
-                // RETURNING wasn't used (no downstream FK) or nothing landed
-                // Try a lightweight re-query for a sample
                 if let Ok(ids) = self
                     .driver
                     .query_ids(table_name, &pk_col, self.fk_pool_cap)
                     .await
                 {
-                    if self.debug {
-                        eprintln!("[DEBUG]   query_ids returned {} ids", ids.len());
-                    }
                     fk_pools.insert(table_name.clone(), ids);
                 } else {
-                    if self.debug {
-                        eprintln!(
-                            "[DEBUG]   query_ids failed; using synthetic_pool (size={})",
-                            inserted
-                        );
-                    }
                     fk_pools.insert(
                         table_name.clone(),
                         synthetic_pool(inserted as usize, self.fk_pool_cap),
                     );
                 }
             } else if !collected_ids.is_empty() {
-                if self.debug {
-                    eprintln!(
-                        "[DEBUG]   Inserting {} collected ids into fk_pools for '{}'",
-                        collected_ids.len(),
-                        table_name
-                    );
-                }
                 fk_pools.insert(table_name.clone(), collected_ids);
-            } else {
-                // Already had a pool or no IDs needed
-                if !fk_pools.contains_key(table_name) {
-                    if self.debug {
-                        eprintln!(
-                            "[DEBUG]   No pool yet; using synthetic_pool (size={})",
-                            inserted
-                        );
-                    }
-                    fk_pools.insert(
-                        table_name.clone(),
-                        synthetic_pool(inserted as usize, self.fk_pool_cap),
-                    );
-                }
+            } else if !fk_pools.contains_key(table_name) && inserted > 0 {
+                fk_pools.insert(
+                    table_name.clone(),
+                    synthetic_pool(inserted as usize, self.fk_pool_cap),
+                );
             }
 
             bar.finish_with_message(format!("{} ✓ {} rows", table_name, inserted));

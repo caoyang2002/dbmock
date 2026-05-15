@@ -169,7 +169,9 @@ async fn handle_config(args: cli::ConfigArgs) -> Result<()> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
-    // ── parse --rows ─────────────────────────────────────────────────────────
+    const DEFAULT_ROW_COUNT: usize = 1000;
+
+    // ── parse --rows (explicit per-table counts) ─────────────────────────────
     let mut row_counts: HashMap<String, usize> = HashMap::new();
     for entry in &args.rows {
         let parts: Vec<&str> = entry.splitn(2, '=').collect();
@@ -185,40 +187,6 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
             message: format!("Invalid row count '{}' for table '{}'", parts[1], parts[0]),
         })?;
         row_counts.insert(parts[0].to_string(), count);
-    }
-    // 如果没有提供 --rows 参数，则从 config.yml 中读取表名，每表默认 10 行
-    if row_counts.is_empty() {
-        // 确定 mock config 文件路径
-        let cfg_path = if let Some(ref path) = args.mock_config {
-            Path::new(path).to_path_buf()
-        } else {
-            // 默认尝试当前目录下的 mock_config.yml
-            Path::new("mock_config.yml").to_path_buf()
-        };
-
-        if !cfg_path.exists() {
-            return Err(MockerError::Config {
-                message: format!(
-                    "No --rows provided and no mock config file found at '{}'. Please provide either --rows or a valid mock config file.",
-                    cfg_path.display()
-                ),
-            });
-        }
-
-        println!(
-            "⚙️   Loading mock config: {} (to get table list)",
-            cfg_path.display()
-        );
-        let mc = fieldconfig::serialize::load_config(&cfg_path)?;
-        for table_name in mc.keys() {
-            row_counts.insert(table_name.clone(), 10);
-        }
-        if row_counts.is_empty() {
-            return Err(MockerError::Config {
-                message: "Mock config file contains no tables.".into(),
-            });
-        }
-        println!("📊  No --rows provided, will generate 10 rows for each table in config.");
     }
 
     // ── load schema ──────────────────────────────────────────────────────────
@@ -239,6 +207,37 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
         None
     };
 
+    // ── determine which tables to generate and their row counts ───────────────
+    if row_counts.is_empty() {
+        // 没有提供 --rows，则使用全局默认行数（--count 或 DEFAULT_ROW_COUNT）
+        let default_count = args.count.unwrap_or(DEFAULT_ROW_COUNT);
+
+        // 获取所有需要生成的表名
+        let table_names: Vec<String> = if let Some(ref mc) = mock_config {
+            // 优先使用 mock config 中定义的表（用户可能只关心部分表）
+            mc.keys().cloned().collect()
+        } else {
+            // 否则使用 schema 中的所有表
+            schema_obj.tables.iter().map(|t| t.name.clone()).collect()
+        };
+
+        if table_names.is_empty() {
+            return Err(MockerError::Config {
+                message: "No tables found to generate. Please provide a schema or mock config."
+                    .into(),
+            });
+        }
+
+        for tname in table_names {
+            row_counts.insert(tname, default_count);
+        }
+
+        println!(
+            "📊  No --rows provided, will generate {} rows for each table.",
+            default_count
+        );
+    }
+
     // ── summary ──────────────────────────────────────────────────────────────
     println!("📊  Tables to generate:");
     let total: usize = row_counts.values().sum();
@@ -257,11 +256,12 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
     }
     println!();
 
-    // ── preview  ──────────────────────────────────────────────────────────────
+    // ── preview mode ─────────────────────────────────────────────────────────
     if args.preview {
         println!("🔬  Preview mode — SQL preview:\n");
         let engine = PreviewEngine {
             db_type: schema_obj.database_type.clone(),
+            debug: args.debug,
         };
         engine
             .generate(&schema_obj, &row_counts, true, mock_config.as_ref())
@@ -284,11 +284,13 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
     println!("🔌  Connecting to {} database...", db_cfg.db_type);
     let drv = driver::create_driver(&db_cfg).await?;
     println!("✅  Connected.\n");
+
     let tuning = auto_tune(Some(10));
     println!(
         "并发执行数量: {}\n每个被引用的表在内存中缓存的主键值数量: {}\n单次发送行数: {}",
         tuning.concurrency, tuning.fk_pool_cap, tuning.insert_rows
     );
+
     let mut engine = MockEngine::new(drv.clone(), tuning);
     engine.set_debug(args.debug);
     let report = engine
@@ -319,6 +321,7 @@ async fn handle_generate(args: cli::GenerateArgs) -> Result<()> {
 
 struct PreviewEngine {
     db_type: String,
+    debug: bool,
 }
 
 #[async_trait::async_trait]
@@ -403,6 +406,7 @@ impl DataGenerator for PreviewEngine {
                 table_cfg,
                 5000,
                 constraint_tracker.as_ref(),
+                self.debug,
             );
             for s in stmts {
                 report.sql_statements.push(s);

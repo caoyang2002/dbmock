@@ -120,6 +120,10 @@ pub struct GenerateArgs {
     #[arg(short = 'c', long = "config")]
     pub mock_config: Option<String>,
 
+    /// 全局默认生成行数（当未指定 --rows 时，为所有表生成该数量的行）
+    #[arg(short, long)]
+    pub count: Option<usize>,
+
     /// Row counts per table: TABLE=COUNT  (repeatable)
     #[arg(
         short = 'r',

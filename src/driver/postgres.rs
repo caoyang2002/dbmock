@@ -224,35 +224,50 @@ impl PostgresDriver {
 
     async fn fetch_foreign_keys(&self, table: &str) -> Result<Vec<ForeignKey>> {
         let rows = sqlx::query(
-            "SELECT \
-                kcu.column_name, \
-                ccu.table_name  AS referenced_table, \
-                ccu.column_name AS referenced_column, \
-                tc.constraint_name \
-             FROM information_schema.table_constraints tc \
-             JOIN information_schema.key_column_usage kcu \
-                ON tc.constraint_name = kcu.constraint_name \
-                AND tc.table_schema   = kcu.table_schema \
-             JOIN information_schema.constraint_column_usage ccu \
-                ON ccu.constraint_name = tc.constraint_name \
-                AND ccu.table_schema   = tc.table_schema \
-             WHERE tc.constraint_type = 'FOREIGN KEY' \
-               AND tc.table_schema = 'public' \
-               AND tc.table_name   = $1",
+            r#"
+            SELECT
+                a.attname AS column_name,
+                r.relname AS referenced_table,
+                f.attname AS referenced_column,
+                con.conname AS constraint_name
+            FROM pg_constraint con
+            JOIN pg_class t ON t.oid = con.conrelid
+            JOIN pg_namespace n ON n.oid = t.relnamespace
+            JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey)
+            JOIN pg_class r ON r.oid = con.confrelid
+            JOIN pg_attribute f ON f.attrelid = con.confrelid AND f.attnum = ANY(con.confkey)
+            WHERE t.relname = $1
+              AND n.nspname = 'public'
+              AND con.contype = 'f'
+            "#,
         )
         .bind(table)
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows
-            .iter()
-            .map(|r| ForeignKey {
-                column: r.get("column_name"),
-                referenced_table: r.get("referenced_table"),
-                referenced_column: r.get("referenced_column"),
-                constraint_name: r.get("constraint_name"),
-            })
-            .collect())
+        let mut fks = Vec::new();
+        for row in rows {
+            let column: String = row.get("column_name");
+            let referenced_table: String = row.get("referenced_table");
+            let referenced_column: String = row.get("referenced_column");
+            let constraint_name: Option<String> = row.try_get("constraint_name").ok();
+
+            let normalize_ident = |s: &str| -> String {
+                s.trim_matches('"')
+                    .split('.')
+                    .last()
+                    .unwrap_or(s)
+                    .to_string()
+            };
+
+            fks.push(ForeignKey {
+                column: normalize_ident(&column),
+                referenced_table: normalize_ident(&referenced_table),
+                referenced_column: normalize_ident(&referenced_column),
+                constraint_name,
+            });
+        }
+        Ok(fks)
     }
 
     async fn fetch_unique_constraints(&self, table: &str) -> Result<Vec<Vec<String>>> {
@@ -260,7 +275,6 @@ impl PostgresDriver {
 
         let rows = sqlx::query(
             r#"
-            -- 显式 UNIQUE 约束（来自 information_schema）
             SELECT
                 kcu.constraint_name,
                 kcu.column_name,
@@ -270,35 +284,15 @@ impl PostgresDriver {
                 ON tc.constraint_name = kcu.constraint_name
                 AND tc.table_schema   = kcu.table_schema
             WHERE tc.constraint_type = 'UNIQUE'
-              AND tc.table_schema = current_schema()    -- 动态获取当前模式
+              AND tc.table_schema = 'public'
               AND tc.table_name   = $1
-
-            UNION ALL
-
-            -- 唯一索引（来自 pg_index）
-            SELECT
-                i.relname AS constraint_name,
-                a.attname AS column_name,
-                a.attnum  AS ordinal_position
-            FROM pg_index idx
-            JOIN pg_class i ON i.oid = idx.indexrelid
-            JOIN pg_class t ON t.oid = idx.indrelid
-            JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(idx.indkey)
-            WHERE t.relname = $1
-              AND t.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema())
-              AND idx.indisunique = true
-              AND NOT EXISTS (
-                  SELECT 1 FROM information_schema.table_constraints tc
-                  WHERE tc.constraint_name = i.relname
-                    AND tc.constraint_type = 'UNIQUE'
-              )
+            ORDER BY constraint_name, ordinal_position
             "#,
         )
         .bind(table)
         .fetch_all(&self.pool)
         .await?;
 
-        // 按约束名分组，并确保列按 ordinal_position 排序
         let mut map: HashMap<String, Vec<(String, i32)>> = HashMap::new();
         for row in rows {
             let constraint_name: String = row.get(0);

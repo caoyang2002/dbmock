@@ -34,10 +34,9 @@ clear:
 	@rm -f schema.sql
 	@rm -f env.mk
 	@rm -f mock_config.yml
-	@rm -f ./target
 
 # 测试数据库连接及所有表的权限
-test-db:
+check:
 	@echo "Testing connection to database..."
 	@psql "$(DB_URL)" -c "SELECT 1" > /dev/null 2>&1 && \
 		echo "✅ Database connection successful" || \
@@ -78,7 +77,7 @@ test-db:
 	fi
 	@echo "All permission checks passed."
 
-init: test-db
+init:
 	@$(BIN) extract --db-url "$(DB_URL)"
 	@$(BIN) config --force
 gen:
@@ -87,28 +86,12 @@ run: build init gen
 	@echo "✅ 完成：构建、初始化、生成数据"
 
 
-# 默认性能测试行数（可通过 make perf ROWS=500000 覆盖）
 PERF_ROWS ?= 100000
 
 ## 运行性能测试：生成指定行数的用户数据并输出耗时与速率
 perf:
-	@echo "🚀 性能测试：生成 $(PERF_ROWS) 行用户数据"
-	@echo "开始时间: $$(date '+%Y-%m-%d %H:%M:%S')"
-	@START=$$(date +%s); \
-	$(BIN) generate --db-url "$(DB_URL)" --rows users=$(PERF_ROWS); \
-	EXIT_CODE=$$?; \
-	END=$$(date +%s); \
-	ELAPSED=$$((END - START)); \
-	if [ $$EXIT_CODE -eq 0 ]; then \
-		echo "✅ 完成 - 耗时: $$ELAPSED 秒"; \
-		if [ $$ELAPSED -gt 0 ]; then \
-			RATE=$$(echo "$(PERF_ROWS) / $$ELAPSED" | bc); \
-			echo "📊 吞吐率: $$RATE 行/秒"; \
-		fi; \
-	else \
-		echo "❌ 性能测试失败"; \
-		exit $$EXIT_CODE; \
-	fi
+	@chmod +x scripts/perf.sh
+	@PERF_ROWS=$(PERF_ROWS) DB_URL="$(DB_URL)" BIN="$(BIN)" ./scripts/perf.sh
 
 help:
 	@echo "Usage: make [target]"

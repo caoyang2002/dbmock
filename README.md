@@ -95,7 +95,7 @@ make run # 自动填充 10 条数据（暂不可设置填充数量）
 
 ```bash
 export DB_URL="postgresql://username:password@localhost/mydb"
-# export DB_URL="postgresql://tinyforum:tf-password@localhost:5678/tiny_forum"
+# export DB_URL="postgresql://tinyforum:tf-password@localhost/tiny_forum"
 ./dbmock extract
 ```
 
@@ -140,13 +140,19 @@ make init
 
 ### 3. 自动生成 Mock 数据
 
-该命令会全量创建数据库，默认 10 条数据，默认读取 `schema.json` 文件，如果文件名有修改，请使用 `-j` 命令配置对应的文件。
+该命令会全量创建数据库，默认会在每个表中创建 1000 条数据，默认读取 `schema.json` 文件，如果文件名有修改，请使用 `-j` 命令配置对应的文件。
 
 ```bash
 ./dbmock generate
 ```
 
-自定义创建数量
+在所有表中自定义创建数量
+
+```bash
+./dbmock generate --count 100000
+```
+
+在指定的表中，自定义创建数量
 
 ```bash
 ./dbmock generate -j schema.json --rows table_name_a=100 --rows table_name_b=500
@@ -212,67 +218,129 @@ dbmock/
 └── Cargo.toml
 ```
 
-完整目录
+## 五、项目说明
 
-```bash
-├── Cargo.toml
-├── README.md
-└── src
-    ├── cli
-    │   ├── mod.rs
-    │   └── parser.rs
-    ├── config
-    │   ├── mod.rs
-    │   └── settings.rs
-    ├── core
-    │   ├── driver.rs
-    │   ├── generator.rs
-    │   ├── mod.rs
-    │   └── schema.rs
-    ├── db
-    │   ├── connection.rs
-    │   ├── mod.rs
-    │   └── types.rs
-    ├── driver
-    │   ├── mod.rs
-    │   ├── mysql.rs
-    │   ├── postgres.rs
-    │   └── sqlite.rs
-    ├── errors
-    │   ├── error.rs
-    │   └── mod.rs
-    ├── generator
-    │   ├── batch.rs
-    │   ├── dependency.rs
-    │   ├── engine.rs
-    │   ├── mod.rs
-    │   └── value.rs
-    ├── main.rs
-    └── schema
-        ├── extractor
-        │   ├── mysql.rs
-        │   ├── postgres.rs
-        │   └── sqlite.rs
-        ├── loader.rs
-        └── mod.rs
+### 1. 顶层入口
+
+- **`main.rs`**  
+  程序主入口，负责初始化、解析命令行参数、加载配置、协调各模块运行。
+
+---
+
+### 模块详解
+
+#### `cli/` – 命令行接口
+- **`parser.rs`** – 解析用户传入的命令行参数（如数据库连接、生成策略、输出格式等）。
+- **`mod.rs`** – 模块入口，暴露公共接口。
+
+#### `config/` – 配置管理
+- **`settings.rs`** – 通用配置项（数据库连接、生成记录数、并发数等）。
+- **`tuning.rs`** – 性能调优参数（批处理大小、缓存设置、超时等）。
+- **`mod.rs`** – 整合配置，提供统一的加载与访问接口。
+
+#### `core/` – 核心逻辑
+- **`driver.rs`** – 数据库驱动层的抽象接口，定义统一的操作（连接、插入、查询等）。
+- **`generator.rs`** – 生成器的主控逻辑，协调字段生成、依赖关系、批处理等。
+- **`schema.rs`** – 内部表示数据表结构、字段类型、约束等。
+- **`mod.rs`** – 核心模块入口。
+
+#### `datapool/` – 数据池（数据源）
+- **`user.rs`** – 用户相关的数据生成规则（如用户名、邮箱、地址等）。
+- **`unique.rs`** – 保证生成值唯一性的机制（如自增ID、唯一令牌）。
+- **`mock_generators.rs`** – 各类模拟数据生成器（姓名、日期、数字、文本等）。
+- **`mod.rs`** – 数据池统一接口。
+
+#### `db/` – 数据库抽象层
+- **`connection.rs`** – 连接管理（建立、关闭、事务）。
+- **`types.rs`** – 数据库类型与 Rust 类型的映射。
+- **`mod.rs`** – 模块入口。
+
+#### `driver/` – 具体数据库驱动实现
+- **`mysql.rs`** – MySQL 适配器，实现 `core::driver` 中定义的接口。
+- **`postgres.rs`** – PostgreSQL 适配器。
+- **`sqlite.rs`** – SQLite 适配器。
+- **`mod.rs`** – 动态选择并导出对应的驱动。
+
+#### `errors/` – 错误处理
+- **`error.rs`** – 自定义错误类型（支持上下文、链式错误）。
+- **`mod.rs`** – 模块入口，通常提供 `Result` 类型别名。
+
+#### `fieldconfig/` – 字段级配置
+- **`types.rs`** – 定义字段的配置数据结构（如类型、范围、默认值、依赖关系）。
+- **`generate.rs`** – 根据字段配置生成具体值。
+- **`infer.rs`** – 从数据库表结构或用户输入推断字段配置。
+- **`serialize.rs`** – 配置的序列化/反序列化（如保存为 YAML/JSON）。
+- **`mod.rs`** – 模块入口。
+
+#### `generator/` – 生成引擎
+- **`engine.rs`** – 生成器的核心引擎，管理生成过程、并发、进度等。
+- **`batch.rs`** – 批量生成逻辑（分页、缓冲区）。
+- **`dependency.rs`** – 处理字段间依赖关系（例如 `total = price * quantity`）。
+- **`value.rs`** – 底层值生成函数（随机、顺序、自定义规则）。
+- **`mod.rs`** – 模块入口。
+
+#### `logger/` – 日志与输出
+- **`applog.rs`** – 应用运行日志（信息、警告、错误）。
+- **`table.rs`** – 表格化输出生成的数据（供预览或导出）。
+- **`mod.rs`** – 模块入口。
+
+#### `schema/` – 模式处理
+- **`loader.rs`** – 加载表结构定义（从文件、数据库或交互式输入）。
+- **`extractor/`** – 从已有数据库提取模式（反向工程）。
+  - **`mysql.rs`** – MySQL 模式提取器。
+  - **`postgres.rs`** – PostgreSQL 模式提取器。
+  - **`sqlite.rs`** – SQLite 模式提取器。
+  - **`mod.rs`** – 统一提取接口。
+- **`mod.rs`** – 模块入口。
+
+---
+
+### 2. 模块协作关系（工作流）
+
+```text
+[CLI] → [Config] → [Logger] 
+   ↓
+[Core] → [Schema] ←→ [FieldConfig]
+   ↓         ↓
+[Driver] ← [DB] ← [Datapool]
+   ↓
+[Generator] → [FieldConfig] → [Datapool]
+   ↓
+[Logger/Table] → 输出结果
 ```
+
+1. **解析输入**：`cli` 读取命令，`config` 加载配置文件。
+2. **加载/提取模式**：`schema::loader` 或 `extractor` 获得目标表结构。
+3. **准备字段配置**：`fieldconfig::infer` 推断每列的生成规则，可选由用户覆盖。
+4. **初始化数据库驱动**：`driver` 根据配置连接 MySQL/Postgres/SQLite。
+5. **生成数据**：`generator::engine` 调用 `batch`、`dependency`、`value` 产生数据行。
+   - 使用 `datapool` 提供的模拟数据源（如用户列表、唯一值池）。
+6. **写入数据库**：通过 `core::driver` 抽象层将数据批量插入。
+7. **日志与输出**：`logger` 记录过程，`table` 可预览生成的数据。
+
 
 遵循 SOLID 原则，高内聚低耦合，易于扩展新的数据库或自定义数据生成策略。
 
-## 五、扩展开发
+## 六、扩展开发
 
-### 添加新的数据库驱动
+### 1. 添加新的数据库驱动
 
 1. 在 `src/driver/` 下新建 `yourdb.rs`。
 2. 实现 `core::driver::DatabaseDriver` trait。
 3. 在 `src/driver/mod.rs` 的 `new()` 工厂中注册。
 4. 如有必要，在 `src/schema/extractor/` 中添加对应的 `extract_schema` 实现。
 
-### 自定义数据生成策略
+### 2. 自定义数据生成策略
 
 修改 `src/generator/value.rs`，可根据列名匹配特定规则（如 `email` → 生成邮箱格式）。
 
-## 六、性能参考
+## 七、性能参考
+
+可以使用工具测试
+
+```bash
+make perf
+```
 
 在 PostgreSQL 12 上生成 100 万条记录（10 个表，含外键）：
 - **Schema 提取**： < 1 秒
@@ -281,9 +349,20 @@ dbmock/
 
 ## 七、技术栈
 
-- [Rust](https://www.rust-lang.org/) – 高性能、内存安全
-- [sqlx](https://github.com/launchbadge/sqlx) – 异步 SQL 工具包，原生支持多种数据库
-- [clap](https://github.com/clap-rs/clap) – 命令行参数解析
-- [serde](https://serde.rs/) – 序列化/反序列化
-- [rand](https://github.com/rust-random/rand) – 随机数据生成
-- [tokio](https://tokio.rs/) – 异步运行时
+| 类别 | 技术/库 | 版本 | 用途说明 |
+|------|---------|------|----------|
+| **编程语言** | Rust | Edition 2021 | 核心语言 |
+| **异步运行时** | tokio | 1.x (full) | 异步 I/O、任务调度、多线程执行 |
+| **数据库驱动** | sqlx | 0.7 | 异步数据库连接池与查询，支持 PostgreSQL、MySQL、SQLite，以及 `json`、`chrono`、`uuid` 特性 |
+| **命令行解析** | clap | 4.x (derive) | 定义和解析命令行参数，支持子命令和自动生成帮助信息 |
+| **序列化** | serde / serde_json / serde_yaml | 1.x / 0.9 | 数据序列化（JSON/YAML），用于配置文件、输出结果等 |
+| **随机生成** | rand | 0.8 | 基础随机数生成，用于 mock 数据 |
+| **日期时间** | chrono | 0.4 | 处理日期、时间、时区，支持 serde 序列化 |
+| **UUID** | uuid | 1.x | 生成和解析 UUID（v4 版本），支持 serde |
+| **错误处理** | thiserror / anyhow | 1.x | thiserror 定义自定义错误类型，anyhow 简化错误传播 |
+| **异步 trait** | async-trait | 0.1 | 支持在 trait 中定义异步方法 |
+| **模拟数据生成** | fake | 2.9 | 丰富多样的假数据生成器（姓名、地址、互联网等），与 chrono、uuid 集成 |
+| **进度条** | indicatif | 0.17 | 命令行进度条和状态指示 |
+| **全局初始化** | once_cell | 1.21 | 懒静态变量，用于全局配置或资源 |
+| **系统信息** | num_cpus / sys-info | 1.16 / 0.9 | 获取 CPU 核心数、内存等系统资源，用于调优 |
+| **编译优化** | 编译器配置 | release profile | `opt-level=3`, `lto=true`, `codegen-units=1` 进行全链路优化，提升运行时性能 |
