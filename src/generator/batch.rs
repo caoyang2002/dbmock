@@ -6,9 +6,9 @@
 //! Value resolution priority per column:
 //!   1. Auto-increment / Skip    → excluded from column list
 //!   2. Self-referencing FK      → NULL
-//!   3. FK with pool             → random pool entry   (O(1), no clone)
-//!   4. FK nullable, empty pool  → NULL
-//!   5. FieldConfig override     → generate_with_config()
+//!   3. FieldConfig override     → generate_with_config()   ← 用户配置优先于 FK 推断
+//!   4. FK with pool             → random pool entry
+//!   5. FK nullable, empty pool  → NULL
 //!   6. Fallback                 → schema-driven generate_value()
 
 use rand::seq::SliceRandom;
@@ -24,7 +24,6 @@ use crate::fieldconfig::types::FieldKind;
 use crate::generator::value::generate_value;
 
 /// 生成少量样本行（用于 dry-run 预览），不构建完整的 INSERT 语句。
-/// 返回 Vec<Vec<String>>，每个内部 Vec 是一行的所有列值。
 pub fn generate_sample_rows(
     table: &TableSchema,
     sample_count: usize,
@@ -37,7 +36,6 @@ pub fn generate_sample_rows(
         return vec![];
     }
 
-    // 构建列列表（与 build_insert_batches 一致）
     let cols: Vec<&ColumnSchema> = table
         .columns
         .iter()
@@ -77,12 +75,10 @@ pub fn generate_sample_rows(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 唯一约束跟踪器（公开发布，供 engine.rs 使用）
+// 唯一约束跟踪器
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// 管理一张表的所有唯一约束
 pub struct UniqueConstraintTracker {
-    // 每个约束对应一个生成器，存储已使用的组合键字符串
     generators: Vec<Mutex<UniqueGenerator<String>>>,
     constraint_cols: Vec<Vec<String>>,
 }
@@ -99,17 +95,13 @@ impl UniqueConstraintTracker {
         }
     }
 
-    /// 检查一行是否满足所有唯一约束，若满足则记录并返回 true；否则返回 false
     pub fn check_and_insert(&self, row_values: &[String], col_names: &[String]) -> bool {
         for (idx, cols) in self.constraint_cols.iter().enumerate() {
-            // 构建组合键：将约束中涉及的列的值按顺序拼接
             let mut key_parts = Vec::new();
             for c in cols {
                 if let Some(pos) = col_names.iter().position(|name| name == c) {
                     key_parts.push(row_values[pos].clone());
                 } else {
-                    // 该列不在当前插入列表中（可能因 auto_increment 或 skip 被排除）
-                    // 此时无法验证完整性，跳过该约束（但实际不应发生）
                     continue;
                 }
             }
@@ -119,7 +111,7 @@ impl UniqueConstraintTracker {
             let key = key_parts.join("|");
             let mut gen = self.generators[idx].lock().unwrap();
             if !gen.insert(key) {
-                return false; // 冲突
+                return false;
             }
         }
         true
@@ -130,14 +122,6 @@ impl UniqueConstraintTracker {
 // 批量生成 INSERT 语句（核心函数）
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Build all INSERT statements for `table`.
-///
-/// - `row_count`         : total rows to generate
-/// - `insert_rows`       : rows per INSERT statement (e.g. 1_000)
-/// - `fk_id_pools`       : table → pool of SQL literals for FK values
-/// - `self_ref_cols`     : column names with self-referencing FK (→ NULL)
-/// - `table_config`      : optional per-column FieldConfig overrides
-/// - `constraint_tracker`: optional tracker for unique constraints
 pub fn build_insert_batches(
     table: &TableSchema,
     row_count: usize,
@@ -188,14 +172,21 @@ pub fn build_insert_batches(
         .map(|col| resolve_strategy(col, table, fk_id_pools, self_ref_cols, table_config))
         .collect();
 
-    // 为所有单列唯一约束构建顺序分配器（包括外键列和非外键列）
     let mut sequential_allocators: HashMap<String, (Vec<String>, usize)> = HashMap::new();
     for constraint in &table.unique_constraints {
         if constraint.len() != 1 {
-            continue; // 多列唯一约束仍使用 tracker + 重试
+            continue;
         }
         let col_name = &constraint[0];
-        // 尝试作为外键处理
+
+        // 若该列已被 FieldConfig 显式配置，跳过顺序分配器：
+        // FieldConfig 自身负责唯一性（如 Username/Email 走全局 HashSet）。
+        if let Some(cfg) = table_config {
+            if cfg.contains_key(col_name) {
+                continue;
+            }
+        }
+
         let mut is_fk = false;
         if let Some(fk) = table.foreign_keys.iter().find(|fk| fk.column == *col_name) {
             if let Some(pool) = fk_id_pools.get(&fk.referenced_table) {
@@ -208,7 +199,6 @@ pub fn build_insert_batches(
             }
         }
         if !is_fk {
-            // 非外键唯一列：生成 1..=row_count 并打乱
             let mut values: Vec<String> = (1..=row_count).map(|i| i.to_string()).collect();
             values.shuffle(&mut rand::thread_rng());
             sequential_allocators.insert(col_name.clone(), (values, 0));
@@ -226,12 +216,9 @@ pub fn build_insert_batches(
         let mut retries = 0;
         let final_values = loop {
             values_buf.clear();
-            // 临时存储本次尝试的顺序分配值（不更新索引）
-            let mut temp_alloc_values = Vec::new();
             for (strat, col) in strategies.iter().zip(cols.iter()) {
                 if let Some((pool, idx)) = sequential_allocators.get_mut(&col.name) {
                     let v = pool[*idx % pool.len()].clone();
-                    temp_alloc_values.push(v.clone());
                     values_buf.push(v);
                 } else {
                     let v = apply_strategy(strat, col, db_type);
@@ -239,7 +226,6 @@ pub fn build_insert_batches(
                 }
             }
 
-            // 唯一性检查
             let ok = if let Some(tracker) = constraint_tracker {
                 tracker.check_and_insert(&values_buf, &col_names)
             } else {
@@ -247,8 +233,7 @@ pub fn build_insert_batches(
             };
 
             if ok {
-                // 成功：更新顺序分配器的索引
-                for (strat, col) in strategies.iter().zip(cols.iter()) {
+                for col in cols.iter() {
                     if let Some((_pool, idx)) = sequential_allocators.get_mut(&col.name) {
                         *idx += 1;
                     }
@@ -257,15 +242,13 @@ pub fn build_insert_batches(
             } else {
                 retries += 1;
                 if retries >= MAX_RETRIES {
-                    // 放弃，仍然更新索引避免死循环
-                    for (strat, col) in strategies.iter().zip(cols.iter()) {
+                    for col in cols.iter() {
                         if let Some((_pool, idx)) = sequential_allocators.get_mut(&col.name) {
                             *idx += 1;
                         }
                     }
                     break values_buf.clone();
                 }
-                // 重试：不更新分配器索引，继续循环
                 continue;
             }
         };
@@ -282,12 +265,11 @@ pub fn build_insert_batches(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 辅助类型和函数
+// 策略解析
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum ColStrategy<'a> {
     ForceNull,
-    /// Borrow the pool slice — no clone of the entire Vec.
     FkPool(&'a [String]),
     Configured {
         fc: &'a crate::fieldconfig::types::FieldConfig,
@@ -296,7 +278,6 @@ enum ColStrategy<'a> {
     Generate,
 }
 
-//
 fn resolve_strategy<'a>(
     col: &ColumnSchema,
     table: &TableSchema,
@@ -304,12 +285,23 @@ fn resolve_strategy<'a>(
     self_ref_cols: &[String],
     table_config: Option<&'a TableFieldConfig>,
 ) -> ColStrategy<'a> {
-    // 1. Self-ref FK
+    // 优先级 1：自引用 FK → 始终 NULL，即使有 FieldConfig 也如此
+    // （自引用列生成有效 ID 需要已插入的行，超出当前生成范围）
     if self_ref_cols.contains(&col.name) {
         return ColStrategy::ForceNull;
     }
 
-    // 2. Regular FK
+    // 优先级 2：用户显式配置（FieldConfig）
+    // ★ 必须在 FK 推断之前：用户配置了 type: username/email 等，
+    //   不应被 FK 推断覆盖，否则会输出外键池里的整数。
+    if let Some(cfg) = table_config {
+        if let Some(fc) = cfg.get(&col.name) {
+            let unique_key = format!("{}.{}", table.name, col.name);
+            return ColStrategy::Configured { fc, unique_key };
+        }
+    }
+
+    // 优先级 3：常规 FK 推断（仅在无 FieldConfig 时生效）
     if let Some(fk) = table.foreign_keys.iter().find(|fk| fk.column == col.name) {
         if let Some(pool) = fk_id_pools.get(&fk.referenced_table) {
             if !pool.is_empty() {
@@ -319,18 +311,10 @@ fn resolve_strategy<'a>(
         if col.is_nullable {
             return ColStrategy::ForceNull;
         }
-        // Non-nullable FK, empty pool → fall through; DB will report the error.
+        // 非空 FK 但池为空 → 落入 Generate，由 DB 报错
     }
 
-    // 3. FieldConfig override
-    if let Some(cfg) = table_config {
-        if let Some(fc) = cfg.get(&col.name) {
-            let unique_key = format!("{}.{}", table.name, col.name);
-            return ColStrategy::Configured { fc, unique_key };
-        }
-    }
-
-    // 4. Schema-driven default
+    // 优先级 4：schema 驱动默认生成
     ColStrategy::Generate
 }
 

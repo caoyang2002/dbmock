@@ -81,7 +81,7 @@ init:
 	@$(BIN) extract --db-url "$(DB_URL)"
 	@$(BIN) config --force
 gen:
-	@$(BIN) generate --db-url "$(DB_URL)"
+	@$(BIN) generate --db-url "$(DB_URL)" -c mock_config.yml --count 1000
 run: build init gen
 	@echo "✅ 完成：构建、初始化、生成数据"
 

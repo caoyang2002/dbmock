@@ -2,11 +2,15 @@
 //!
 //! 唯一生成器内部使用 `HashSet` + 随机字符串保证不重复，碰撞时使用 UUID 回退。
 //! 随机生成器直接返回随机值（允许重复）。
+//!
+//! # 线程安全
+//! 所有全局状态均通过 `Mutex` 保护，无竞态条件。
 
 use fake::faker::address::zh_cn::{CityName, CountryName, StateName, StreetName};
 use fake::faker::company::zh_cn::CompanyName;
 use fake::faker::creditcard::zh_cn::CreditCardNumber;
 use fake::faker::internet::en::SafeEmail;
+use fake::faker::internet::zh_tw::Username;
 use fake::faker::job::zh_cn::{Seniority, Title};
 use fake::faker::name::zh_cn::Name;
 use fake::faker::phone_number::zh_cn::PhoneNumber;
@@ -20,29 +24,25 @@ use uuid::Uuid;
 use super::unique::UniqueGenerator;
 
 // -----------------------------------------------------------------------------
-// 全局唯一生成器（仅手机号保留原有方式，用户名/邮箱已优化为无重试）
+// 全局唯一生成器
 // -----------------------------------------------------------------------------
 
 static UNIQUE_PHONE_GEN: Lazy<Mutex<UniqueGenerator<String>>> =
     Lazy::new(|| Mutex::new(UniqueGenerator::new()));
 
-// 全局存储已使用的用户名和邮箱（延迟初始化，无编译错误）
 static USED_USERNAMES: Lazy<Mutex<HashSet<String>>> = Lazy::new(|| Mutex::new(HashSet::new()));
 static USED_EMAILS: Lazy<Mutex<HashSet<String>>> = Lazy::new(|| Mutex::new(HashSet::new()));
 
 // -----------------------------------------------------------------------------
-// 辅助函数
+// 内部辅助函数
 // -----------------------------------------------------------------------------
 
-/// 生成随机字符串（字母数字）
+/// 生成随机字母数字字符串（小写）
 fn random_string(len: usize) -> String {
-    let chars: Vec<char> = "abcdefghijklmnopqrstuvwxyz0123456789".chars().collect();
+    const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
     let mut rng = rand::thread_rng();
     (0..len)
-        .map(|_| {
-            let idx = rng.gen_range(0..chars.len());
-            chars[idx]
-        })
+        .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
         .collect()
 }
 
@@ -51,32 +51,36 @@ fn random_base64url(len: usize) -> String {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     let mut rng = rand::thread_rng();
     (0..len)
-        .map(|_| {
-            let idx = rng.gen_range(0..CHARSET.len());
-            CHARSET[idx] as char
-        })
+        .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
         .collect()
 }
 
 // -----------------------------------------------------------------------------
-// 公开的唯一生成器（对外保证不重复）
+// 唯一生成器（对外保证不重复）
 // -----------------------------------------------------------------------------
 
-/// 生成唯一的用户名（6位随机字符，碰撞后使用 UUID）
+/// 生成唯一的用户名
+///
+/// 使用 `fake` 库生成候选值，碰撞时附加 UUID 短串直到唯一。
 pub fn unique_username() -> String {
     let mut used = USED_USERNAMES.lock().unwrap();
-    let candidate = random_string(6);
+    // 先尝试 fake 库生成的用户名
+    let candidate: String = Username().fake();
     if used.insert(candidate.clone()) {
         return candidate;
     }
-    // 碰撞：使用 UUID（取前6位）
-    let uuid_str = Uuid::new_v4().simple().to_string();
-    let fallback = format!("u{}", &uuid_str[..6]);
-    used.insert(fallback.clone());
-    fallback
+    // 碰撞：将 fake 用户名 + UUID 前6位拼接，保证唯一
+    loop {
+        let suffix = &Uuid::new_v4().simple().to_string()[..6];
+        let fallback = format!("{}_{}", candidate, suffix);
+        if used.insert(fallback.clone()) {
+            return fallback;
+        }
+        // 极端情况下继续重试（概率可忽略）
+    }
 }
 
-/// 生成唯一的邮箱（12位随机字符 + @example.com，碰撞后使用 UUID）
+/// 生成唯一的邮箱（12位随机字符 + @example.com，碰撞时使用 UUID）
 pub fn unique_email() -> String {
     let mut used = USED_EMAILS.lock().unwrap();
     let local = random_string(12);
@@ -84,29 +88,32 @@ pub fn unique_email() -> String {
     if used.insert(candidate.clone()) {
         return candidate;
     }
-    // 碰撞：使用 UUID 构造邮箱
-    let uuid_str = Uuid::new_v4().simple().to_string();
-    let fallback_local = format!("u{}", &uuid_str[..10]);
-    let fallback = format!("{}@example.com", fallback_local);
-    used.insert(fallback.clone());
-    fallback
+    // 碰撞：使用完整 UUID hex 构造邮箱，几乎不可能再碰撞
+    loop {
+        let local = format!("u{}", &Uuid::new_v4().simple().to_string()[..12]);
+        let fallback = format!("{}@example.com", local);
+        if used.insert(fallback.clone()) {
+            return fallback;
+        }
+    }
 }
 
-/// 生成唯一的手机号（保留原有 UniqueGenerator，可后续优化）
+/// 生成唯一的手机号
 pub fn unique_phone_number() -> String {
     let mut gen = UNIQUE_PHONE_GEN.lock().unwrap();
     gen.generate(|| PhoneNumber().fake())
 }
 
-/// 随机生成 bcrypt 密码哈希（模拟格式）
+/// 随机生成 bcrypt 密码哈希（模拟格式 `$2b$NN$<salt><hash>`）
 pub fn random_password_hash() -> String {
     let rounds: u8 = rand::thread_rng().gen_range(10..=13);
     let salt = random_base64url(22);
     let hash = random_base64url(31);
     format!("$2b${:02}${}{}", rounds, salt, hash)
 }
+
 // -----------------------------------------------------------------------------
-// 公开的随机生成器（可能重复，但速度更快）
+// 随机生成器（可能重复，速度更快）
 // -----------------------------------------------------------------------------
 
 /// 随机头像链接（dicebear API）
@@ -119,7 +126,7 @@ pub fn random_avatar_url() -> String {
 
 /// 随机图片链接（picsum）
 pub fn random_image_url() -> String {
-    let random_num = rand::thread_rng().gen_range(100_000..999_999);
+    let random_num = rand::thread_rng().gen_range(100_000..=999_999);
     format!("https://picsum.photos/1920/1440?random={}", random_num)
 }
 
@@ -163,35 +170,30 @@ pub fn random_article_title() -> String {
     fake::faker::lorem::zh_cn::Sentence(1..2).fake()
 }
 
-/// 随机字符串（指定长度，字母数字混合）
+/// 随机字母数字字符串（指定长度）
 pub fn random_alphanum(len: usize) -> String {
-    const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
-    let mut rng = rand::thread_rng();
-    (0..len)
-        .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
-        .collect()
+    random_string(len)
 }
 
-/// 随机 URL（示例）
+/// 随机 URL
 pub fn random_url() -> String {
-    format!(
-        "https://example.com/{}",
-        random_alphanum(rand::thread_rng().gen_range(5..12))
-    )
+    let path_len = rand::thread_rng().gen_range(5..12);
+    format!("https://example.com/{}", random_string(path_len))
 }
 
-// ======================== 新增生成器 ========================
+// ======================== 通用生成器 ========================
 
-/// 随机生成 slug（例如 "my-awesome-post"）
+/// 随机 slug（例如 "my-awesome-post"）
 pub fn random_slug() -> String {
-    let word_count = rand::thread_rng().gen_range(2..=4);
-    let words: Vec<String> = (0..word_count)
-        .map(|_| random_alphanum(rand::thread_rng().gen_range(3..=8)))
-        .collect();
-    words.join("-")
+    let mut rng = rand::thread_rng();
+    let word_count = rng.gen_range(2..=4);
+    (0..word_count)
+        .map(|_| random_string(rng.gen_range(3..=8)))
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
-/// 随机生成版本号，例如 "1.2.3"
+/// 随机语义化版本号，例如 "1.2.3"
 pub fn random_version() -> String {
     let mut rng = rand::thread_rng();
     format!(
@@ -202,45 +204,34 @@ pub fn random_version() -> String {
     )
 }
 
-/// 随机生成十六进制颜色，例如 "#A3F2C1"
+/// 随机十六进制颜色，例如 "#A3F2C1"
 pub fn random_color() -> String {
-    let mut rng = rand::thread_rng();
-    format!("#{:06X}", rng.gen_range(0_u32..=0xFF_FF_FF))
+    let color: u32 = rand::thread_rng().gen_range(0..=0xFF_FF_FF);
+    format!("#{:06X}", color)
 }
 
-/// 随机生成 User-Agent 字符串
+/// 随机 User-Agent 字符串
 pub fn random_user_agent() -> String {
-    format!("Mozilla/5.0 (compatible; dbmock/{})", random_alphanum(4))
+    format!("Mozilla/5.0 (compatible; dbmock/{})", random_string(4))
 }
 
-/// 随机生成 IPv4 地址
+/// 随机 IPv4 地址（排除广播/保留地址首尾字节为 0/255）
 pub fn random_ip() -> String {
     let mut rng = rand::thread_rng();
     format!(
         "{}.{}.{}.{}",
-        rng.gen_range(1..=254),
-        rng.gen_range(0..=255),
-        rng.gen_range(0..=255),
-        rng.gen_range(1..=254),
+        rng.gen_range(1_u8..=254),
+        rng.gen_range(0_u8..=255),
+        rng.gen_range(0_u8..=255),
+        rng.gen_range(1_u8..=254),
     )
 }
 
-/// 生成随机 base64url 字符串（辅助函数）
-// fn random_base64url(len: usize) -> String {
-//     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-//     let mut rng = rand::thread_rng();
-//     (0..len)
-//         .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
-//         .collect()
-// }
-
-// 在 mock_generators.rs 中添加以下函数
-
-/// 随机文件哈希（模拟 SHA256 十六进制）
+/// 随机文件哈希（模拟 SHA-256 十六进制，64位）
 pub fn random_file_hash() -> String {
     let mut rng = rand::thread_rng();
     (0..64)
-        .map(|_| format!("{:x}", rng.gen_range(0..16)))
+        .map(|_| format!("{:x}", rng.gen_range(0_u8..16)))
         .collect()
 }
 
@@ -273,22 +264,21 @@ pub fn random_extension() -> String {
 
 /// 随机令牌（字母数字，长度 32）
 pub fn random_token() -> String {
-    random_alphanum(32)
+    random_string(32)
 }
 
-/// 随机 JTI（UUID 格式）
+/// 随机 JTI（UUID v4 格式）
 pub fn random_jti() -> String {
     Uuid::new_v4().to_string()
 }
 
-/// 随机 cron 表达式（简单模拟）
+/// 随机 cron 表达式（分 + 时，每天执行一次）
 pub fn random_cron_expr() -> String {
     let mut rng = rand::thread_rng();
     format!("{} {} * * *", rng.gen_range(0..=59), rng.gen_range(0..=23))
 }
 
-// ---------- 电商
-// ========== 电商生成器 ==========
+// ======================== 电商生成器 ========================
 
 /// 随机商品名称（中文）
 pub fn random_product_name() -> String {
@@ -318,11 +308,12 @@ pub fn random_product_name() -> String {
     format!("{} Pro", PRODUCTS[idx])
 }
 
-/// 随机 SKU（如 IPHONE14-128GB-BLACK）
+/// 随机 SKU（例如 ABCD-1234-EFG）
 pub fn random_sku() -> String {
-    let prefix = random_alphanum(4).to_uppercase();
-    let num = rand::thread_rng().gen_range(1000..9999);
-    let suffix = random_alphanum(3).to_uppercase();
+    let mut rng = rand::thread_rng();
+    let prefix = random_string(4).to_uppercase();
+    let num = rng.gen_range(1000..=9999);
+    let suffix = random_string(3).to_uppercase();
     format!("{}-{}-{}", prefix, num, suffix)
 }
 
@@ -358,17 +349,17 @@ pub fn random_payment_method() -> String {
     METHODS[idx].to_string()
 }
 
-/// 随机物流单号（模拟）
+/// 随机物流单号（模拟顺丰格式）
 pub fn random_tracking_number() -> String {
-    format!("SF{}", random_alphanum(12).to_uppercase())
+    format!("SF{}", random_string(12).to_uppercase())
 }
 
-/// 随机优惠券码
+/// 随机优惠券码（8位大写字母数字）
 pub fn random_coupon_code() -> String {
-    random_alphanum(8).to_uppercase()
+    random_string(8).to_uppercase()
 }
 
-// ========== 社区生成器 ==========
+// ======================== 社区生成器 ========================
 
 /// 随机帖子类型
 pub fn random_post_type() -> String {
@@ -405,7 +396,7 @@ pub fn random_report_type() -> String {
     TYPES[idx].to_string()
 }
 
-/// 随机违规类型（小整数转换）
+/// 随机违规类型（1–10）
 pub fn random_violation_type() -> i16 {
     rand::thread_rng().gen_range(1..=10)
 }
@@ -419,14 +410,14 @@ pub fn random_action() -> String {
     ACTIONS[idx].to_string()
 }
 
-/// 随机目标类型（评论/帖子/用户等）
+/// 随机目标类型
 pub fn random_target_type() -> String {
     const TYPES: [&str; 6] = ["post", "comment", "user", "board", "tag", "topic"];
     let idx = rand::thread_rng().gen_range(0..TYPES.len());
     TYPES[idx].to_string()
 }
 
-/// 随机角色（user/moderator/admin）
+/// 随机角色
 pub fn random_role() -> String {
     const ROLES: [&str; 3] = ["user", "moderator", "admin"];
     let idx = rand::thread_rng().gen_range(0..ROLES.len());
@@ -447,7 +438,7 @@ pub fn random_notification_type() -> String {
     TYPES[idx].to_string()
 }
 
-// ========== 教育生成器 ==========
+// ======================== 教育生成器 ========================
 
 /// 随机课程名称（中文）
 pub fn random_course_name() -> String {
@@ -488,7 +479,7 @@ pub fn random_subject() -> String {
     SUBJECTS[idx].to_string()
 }
 
-/// 随机难度等级（初级/中级/高级）
+/// 随机难度等级
 pub fn random_difficulty() -> String {
     const LEVELS: [&str; 3] = ["beginner", "intermediate", "advanced"];
     let idx = rand::thread_rng().gen_range(0..LEVELS.len());
@@ -502,7 +493,7 @@ pub fn random_course_type() -> String {
     TYPES[idx].to_string()
 }
 
-/// 随机问题类型（选择题/判断题/简答题等）
+/// 随机题目类型
 pub fn random_question_type() -> String {
     const TYPES: [&str; 5] = [
         "single_choice",
@@ -522,12 +513,13 @@ pub fn random_grade_letter() -> String {
     GRADES[idx].to_string()
 }
 
-/// 随机证书编号（模拟）
+/// 随机证书编号（例如 CERT-AB12-3456）
 pub fn random_certificate_number() -> String {
+    let mut rng = rand::thread_rng();
     format!(
         "CERT-{}-{}",
-        random_alphanum(4).to_uppercase(),
-        rand::thread_rng().gen_range(1000..9999)
+        random_string(4).to_uppercase(),
+        rng.gen_range(1000..=9999)
     )
 }
 
@@ -538,7 +530,7 @@ pub fn random_assignment_status() -> String {
     STATUS[idx].to_string()
 }
 
-// ========== 开发/技术场景生成器 ==========
+// ======================== 开发/技术场景生成器 ========================
 
 /// 随机编程语言名称
 pub fn random_programming_language() -> String {
@@ -624,18 +616,19 @@ pub fn random_library() -> String {
     LIBRARIES[idx].to_string()
 }
 
-/// 随机 API 端点路径（如 /api/v1/users）
+/// 随机 API 端点路径（例如 `/api/v1/users`）
 pub fn random_api_path() -> String {
-    let parts = [
+    const PARTS: [&str; 14] = [
         "api", "v1", "v2", "users", "posts", "comments", "auth", "admin", "profile", "settings",
         "upload", "download", "search", "health",
     ];
-    let count = rand::thread_rng().gen_range(1..=4);
+    let mut rng = rand::thread_rng();
+    let count = rng.gen_range(1..=4);
     let mut path = String::new();
-    for i in 0..count {
-        let idx = rand::thread_rng().gen_range(0..parts.len());
+    for _ in 0..count {
+        let idx = rng.gen_range(0..PARTS.len());
         path.push('/');
-        path.push_str(parts[idx]);
+        path.push_str(PARTS[idx]);
     }
     if path.is_empty() {
         path.push('/');
@@ -682,11 +675,11 @@ pub fn random_config_key() -> String {
     KEYS[idx].to_string()
 }
 
-/// 随机 Git 提交哈希（短哈希，8 位）
+/// 随机 Git 短提交哈希（8位十六进制）
 pub fn random_commit_hash() -> String {
     let mut rng = rand::thread_rng();
     (0..8)
-        .map(|_| format!("{:x}", rng.gen_range(0..16)))
+        .map(|_| format!("{:x}", rng.gen_range(0_u8..16)))
         .collect()
 }
 
@@ -694,14 +687,15 @@ pub fn random_commit_hash() -> String {
 pub fn random_branch_name() -> String {
     const BRANCHES: [&str; 6] = ["main", "master", "develop", "feature", "release", "hotfix"];
     let idx = rand::thread_rng().gen_range(0..BRANCHES.len());
-    if idx < 3 {
-        BRANCHES[idx].to_string()
-    } else {
-        format!("{}/{}", BRANCHES[idx], random_alphanum(6))
+    match idx {
+        // main / master / develop：直接返回
+        0..=2 => BRANCHES[idx].to_string(),
+        // feature / release / hotfix：追加随机路径
+        _ => format!("{}/{}", BRANCHES[idx], random_string(6)),
     }
 }
 
-/// 随机 Git 标签名
+/// 随机 Git 标签名（例如 "v1.2.3"）
 pub fn random_tag_name() -> String {
     format!("v{}", random_version())
 }
@@ -713,7 +707,7 @@ pub fn random_log_level() -> String {
     LEVELS[idx].to_string()
 }
 
-/// 随机错误类型（字符串）
+/// 随机错误类型
 pub fn random_error_type() -> String {
     const ERRORS: [&str; 8] = [
         "NotFound",
@@ -736,44 +730,44 @@ pub fn random_task_status() -> String {
     STATUS[idx].to_string()
 }
 
-/// 随机 Docker 镜像标签
+/// 随机 Docker 镜像标签（例如 `abcdef/ghijklmn:1.2.3`）
 pub fn random_docker_tag() -> String {
     format!(
         "{}/{}:{}",
-        random_alphanum(6),
-        random_alphanum(8),
+        random_string(6),
+        random_string(8),
         random_version()
     )
 }
 
-/// 随机容器名
+/// 随机容器名（例如 `abcdef-ghij`）
 pub fn random_container_name() -> String {
-    format!("{}-{}", random_alphanum(6), random_alphanum(4))
+    format!("{}-{}", random_string(6), random_string(4))
 }
 
-/// 随机数据库连接字符串（模拟）
+/// 随机数据库连接字符串（模拟，使用各数据库默认端口）
 pub fn random_db_url() -> String {
     let mut rng = rand::thread_rng();
-    let db_type = match rng.gen_range(0..4) {
-        0 => "postgresql",
-        1 => "mysql",
-        2 => "redis",
-        _ => "mongodb",
+    let (scheme, port) = match rng.gen_range(0..4) {
+        0 => ("postgresql", 5432_u16),
+        1 => ("mysql", 3306),
+        2 => ("redis", 6379),
+        _ => ("mongodb", 27017),
     };
     format!(
         "{}://user:pass@localhost:{}/db_{}",
-        db_type,
-        rng.gen_range(3306..5432),
-        random_alphanum(6)
+        scheme,
+        port,
+        random_string(6)
     )
 }
 
-/// 随机端口号（字符串形式）
+/// 随机端口号字符串（用户/临时端口范围 1024–65535）
 pub fn random_port_string() -> String {
-    rand::thread_rng().gen_range(1024..65535).to_string()
+    rand::thread_rng().gen_range(1024_u16..=65535).to_string()
 }
 
-/// 随机包管理器的许可证类型
+/// 随机开源许可证类型
 pub fn random_license() -> String {
     const LICENSES: [&str; 6] = [
         "MIT",

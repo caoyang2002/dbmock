@@ -684,6 +684,17 @@ fn sql_str(s: String) -> String {
     format!("'{}'", s.replace('\'', "''"))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonFieldDef {
+    pub name: String,
+    pub kind: FieldKind,
+    pub required: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub properties: Option<Vec<JsonFieldDef>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub array_items: Option<Box<JsonFieldDef>>,
+}
+
 /// 单个列的生成配置。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FieldConfig {
@@ -694,6 +705,10 @@ pub struct FieldConfig {
     /// 用于 `enum` 和 `set` 类型：随机选取的允许值列表。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub values: Option<Vec<String>>,
+
+    /// 用于 `json` 类型：定义 josn 结构
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub json_schema: Option<Vec<JsonFieldDef>>,
 
     /// 用于 `int` / `float` / `decimal`：下限（包含）。使用 f64 存储。
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -787,6 +802,8 @@ pub enum FieldKind {
     Email,
     /// URL 地址 https://www.domain.tld/path。
     Url,
+    /// 用户头像
+    UrlAvatar,
     /// IPv4 地址（点分十进制）。
     Ip,
     /// 语义化版本号 major.minor.patch。
@@ -795,6 +812,8 @@ pub enum FieldKind {
     // ── 个人信息 ──────────────────────────────────────────────────────────────
     /// bcrypt 格式的哈希字符串。
     Password,
+    /// 用户名（唯一）
+    Username,
     /// 电话号码 +CC subscriber-number。
     Phone,
     /// CSS 十六进制颜色 #RRGGBB。
@@ -839,9 +858,11 @@ impl FieldKind {
             FieldKind::Enum => "从 `values:` 列表中随机选取",
             FieldKind::Email => "user@domain.tld 邮箱地址",
             FieldKind::Url => "https://www.domain.tld/path 网址",
+            FieldKind::UrlAvatar => "https://api.dicebear.com 头像库",
             FieldKind::Ip => "IPv4 地址",
             FieldKind::Semver => "语义化版本号 major.minor.patch",
             FieldKind::Password => "bcrypt 格式的哈希字符串",
+            FieldKind::Username => "唯一用户名",
             FieldKind::Phone => "+CC 国家码 + 用户号码",
             FieldKind::Color => "CSS 十六进制颜色 #RRGGBB",
             FieldKind::UserAgent => "浏览器 User-Agent 字符串",
@@ -869,6 +890,7 @@ impl Default for FieldConfig {
             date_to: None,
             null_rate: None,
             constant: None,
+            json_schema: None,
         }
     }
 }

@@ -211,39 +211,185 @@ make init
 
 该文件控制每个字段（列）如何生成模拟数据。你可以修改任意字段的 `type:` 来改变其生成策略。
 
-### 🔧 可用的生成类型（type）
+### 1. 可用生成类型（`type:`）
 
-| 类型 | 说明 | 示例 / 参数 |
-|------|------|-------------|
-| **default** | 自动根据数据库模式推断（保持默认即可） | 无参数 |
-| **skip**    | 在 INSERT 语句中排除该列 | 无参数 |
-| **null**    | 始终输出 NULL | 无参数 |
-| **constant** | 固定值，在 `constant:` 中指定 | `constant: "固定内容"` |
-| **uuid**    | UUID v4 格式的字符串 | 无参数 |
-| **unique**  | 本次运行内唯一的值（带自增后缀） | 无参数 |
-| **int**     | 随机整数 | `min:` `max:` |
-| **float**   | 随机浮点数 | `min:` `max:` |
-| **decimal** | 固定精度的十进制数 | `min:` `max:` `scale:` |
-| **sequence**| 从 1 开始单调递增的整数 | 无参数 |
-| **bool**    | true / false | 无参数 |
-| **string**  | 随机字母数字字符串 | `min_len:` `max_len:` |
-| **text**    | 随机散文段落 | `max_len:` |
-| **label**   | 短标签（1-2 个单词，首字母大写） | 无参数 |
-| **slug**    | 小写连字符分隔的 slug | 无参数 |
-| **enum**    | 从给定列表中随机选择 | `values: [a, b, c]` |
-| **email**   | `user@domain.tld` 格式 | 无参数 |
-| **url**     | `https://www.domain.tld/path` 格式 | 无参数 |
-| **ip**      | IPv4 地址 | 无参数 |
-| **semver**  | `major.minor.patch` 语义化版本 | 无参数 |
-| **password**| bcrypt 风格的哈希值 | 无参数 |
-| **phone**   | 国际电话格式（如 `+CC subscriber`） | 无参数 |
-| **color**   | CSS 十六进制颜色 `#RRGGBB` | 无参数 |
-| **user_agent** | 浏览器 User-Agent 字符串 | 无参数 |
-| **timestamp_tz** | 带时区的时间戳 | `date_from:` `date_to:` |
-| **timestamp**    | 不带时区的时间戳 | `date_from:` `date_to:` |
-| **date**         | 日期 `YYYY-MM-DD` | `date_from:` `date_to:` |
-| **time**         | 时间 `HH:MM:SS` | 无参数 |
-| **json**         | 随机 JSON 对象 | 无参数 |
+#### 1.1 基础控制类
+
+| 类型 | 说明 | 参数 |
+|------|------|------|
+| `default` | 自动根据数据库列类型生成（最安全，推荐默认使用） | 无 |
+| `skip`   | 完全跳过该列，不会出现在 INSERT 语句中 | 无 |
+| `null`   | 始终输出 SQL 的 `NULL` | 无 |
+| `constant` | 每次都输出相同的固定值 | `constant: "固定值"` |
+
+#### 1.2 标识与唯一性
+| 类型 | 说明 | 参数 |
+|------|------|------|
+| `uuid` | 生成 UUID v4 字符串 | 无 |
+| `unique` | 在本轮生成中保证唯一。若列类型为整数，直接输出数字；否则输出「字母前缀+数字」（如 `abc123`） | 无（自动计数） |
+| `sequence` | 从 1 开始单调递增的整数（每行 +1） | 无 |
+
+#### 1.3 数值类型
+| 类型 | 说明 | 可选参数 |
+|------|------|----------|
+| `int` | 随机整数 | `min`, `max`（默认 0 ~ 2,147,483,647） |
+| `float` | 随机浮点数，保留 4 位小数 | `min`, `max`（默认 0.0 ~ 9999.99） |
+| `decimal` | 固定精度的十进制数 | `min`, `max`, `scale`（小数位数，默认 2） |
+| `bool` | 随机 true/false，会根据数据库类型自动输出 `true`/`false` 或 `1`/`0` | 无 |
+
+#### 1.4 文本类型
+| 类型 | 说明 | 可选参数 |
+|------|------|----------|
+| `string` | 随机字母数字串（小写+数字） | `min_len`, `max_len`（默认 4~32） |
+| `text` | 随机英文短句（若干单词拼接） | `max_len`（默认 500，超长截断） |
+| `label` | 1~2 个首字母大写的单词（适合名称/标签） | 无（单词长度随机 3~8） |
+| `slug` | 小写英文单词用短横线连接（如 `my-new-post`） | `max_len`（默认 32，超长截断） |
+| `enum` | 从给定的列表中随机选取一项 | `values: [a, b, c]` |
+
+#### 1.5 网络与标识
+| 类型 | 说明 | 可选参数 |
+|------|------|----------|
+| `email` | 形如 `user.123@domain.com` 的邮箱 | 无 |
+| `url`   | 形如 `https://www.host.com/path` 的网址 | 无 |
+| `ip`    | IPv4 地址（1～254 段合理） | 无 |
+| `semver`| 语义化版本号 `major.minor.patch`（0~5 / 0~20 / 0~99） | 无 |
+| `password` | 模拟 bcrypt 格式的哈希（`$2b$10$...`），仅供格式参考 | 无 |
+| `phone` | 国际格式手机号 `+CCsubscriber`（国家码 1~99，号码 100_000_000 ~ 9_999_999_999） | 无 |
+| `color` | CSS 十六进制颜色 `#RRGGBB` | 无 |
+| `user_agent` | 简单的浏览器 User-Agent 字符串 | 无 |
+
+#### 1.6 日期时间
+| 类型 | 说明 | 可选参数 |
+|------|------|----------|
+| `timestamp_tz` | 带时区的日期时间，输出格式 `%Y-%m-%d %H:%M:%S+00` | `date_from`, `date_to`（默认近 5 年） |
+| `timestamp` | 不带时区的日期时间，格式 `%Y-%m-%d %H:%M:%S` | 同上 |
+| `date`       | 日期 `%Y-%m-%d` | 同上 |
+| `time`       | 时间 `HH:MM:SS`（00:00:00 ~ 23:59:59） | 无 |
+
+#### 1.7 结构化数据
+| 类型 | 说明 | 可选参数 |
+|------|------|----------|
+| `json` | 生成 JSON 对象。若不提供 `json_schema`，则自动生成 1~4 个随机键值对（数字/字符串/布尔/浮点混合）；若提供 `json_schema`，则按 schema 递归生成精确结构 | `json_schema`（见下文详细说明） |
+
+---
+
+### 2. 全局可选参数（适用于所有类型）
+
+| 参数名 | 类型 | 说明 | 默认值 |
+|--------|------|------|--------|
+| `null_rate` | 浮点数 (0.0~1.0) | 覆盖该列的 NULL 生成概率。对于可空列默认为 0.15（15%），非空列默认为 0 | 取决于是否可空 |
+
+---
+
+### 3. JSON Schema 配置详解（`json_schema`）
+
+当 `type: json` 且需要精确控制 JSON 结构时，可以配置 `json_schema` 字段。它是一个列表，每个元素描述 JSON 对象中的一个字段。
+
+#### 3.1 字段属性
+
+| 属性 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `name` | 字符串 | 是 | JSON 中的键名 |
+| `kind` | 字符串 | 是 | 该字段的生成类型，支持所有基础类型以及 `json_object`、`json_array` |
+| `required` | 布尔 | 否 | 是否必须出现。若为 `false`，约有 20% 概率会省略该字段（模拟可选字段） |
+| `properties` | 列表 | 否 | 当 `kind` 为 `json_object` 时，用于定义内部子字段 |
+| `array_items` | 对象 | 否 | 当 `kind` 为 `json_array` 时，定义数组中每个元素的类型（使用相同结构） |
+
+#### 3.2 示例
+
+```yaml
+json_schema:
+  - name: "user_id"
+    kind: "int"
+    required: true
+  - name: "profile"
+    kind: "json_object"
+    required: true
+    properties:
+      - name: "nickname"
+        kind: "string"
+      - name: "age"
+        kind: "int"
+        required: false
+  - name: "tags"
+    kind: "json_array"
+    required: false
+    array_items:
+      kind: "string"
+```
+
+该配置会生成类似如下的 JSON：
+
+```json
+{
+  "user_id": 423,
+  "profile": {
+    "nickname": "abc123",
+    "age": 28
+  },
+  "tags": ["rust", "database"]
+}
+```
+
+> 注意：`json_array` 的 `array_items` 所指向的类型可以是任意基础类型，也可以是 `json_object`（实现对象数组）。目前数组长度随机为 1~5 个元素。
+
+---
+
+### 4. 完整配置示例
+
+```yaml
+columns:
+  - name: "id"
+    type: "sequence"           # 自增主键
+  - name: "username"
+    type: "string"
+    min_len: 5
+    max_len: 20
+  - name: "score"
+    type: "decimal"
+    min: 0.0
+    max: 100.0
+    scale: 2
+  - name: "is_active"
+    type: "bool"
+  - name: "created_at"
+    type: "timestamp"
+    date_from: "2023-01-01"
+    date_to: "2024-12-31"
+  - name: "metadata"
+    type: "json"
+    null_rate: 0.1
+    json_schema:
+      - name: "version"
+        kind: "semver"
+      - name: "extra"
+        kind: "json_object"
+        properties:
+          - name: "flag"
+            kind: "bool"
+```
+
+---
+
+#### 4.1 注意事项
+
+1. **`unique` 与 `sequence` 的区别**  
+   - `sequence` 只输出纯数字（从 1 开始递增），适合整数主键。  
+   - `unique` 在非整数列上会添加字母前缀，保证字符串列的唯一性。
+
+2. **NULL 生成优先级**  
+   - 列级 `null_rate` > 列的可空属性默认值（15% 或 0）。  
+   - 如果 `null_rate = 0.0`，永远不会生成 NULL（除非显式使用 `type: null`）。
+
+3. **JSON 内部字段不支持自定义 `null_rate`**  
+   目前 JSON 内部的字段 NULL 概率由 `required: false` 控制（约 20% 跳过整个字段），暂不支持细粒度的 NULL 百分比。
+
+4. **日期范围**  
+   当 `date_from` 晚于 `date_to` 时，会自动交换二者。解析失败时会回退到默认的近 5 年窗口。
+
+5. **SQL 注入防护**  
+   所有字符串都会被正确转义（单引号 `'` 变为 `''`），JSON 字符串通过 `serde_json` 序列化也会自动转义双引号和反斜杠。
+
 
 ---
 
